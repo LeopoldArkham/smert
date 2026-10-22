@@ -184,7 +184,22 @@ async fn main() {
         eprintln!("failed to bind {}: {e}", config.bind);
         std::process::exit(1);
     });
-    let _ = axum::serve(listener, app).await;
+    let _ = axum::serve(listener, app).with_graceful_shutdown(shutdown_signal()).await;
+}
+
+/// Resolves on Ctrl+C or SIGTERM, which `docker stop` sends on every redeploy.
+/// Without it the server ignores SIGTERM and is killed after a timeout.
+async fn shutdown_signal() {
+    let terminate = async {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut sigterm) => { sigterm.recv().await; }
+            Err(_)          => std::future::pending().await,
+        }
+    };
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {}
+        _ = terminate => {}
+    }
 }
 
 // ── Display handlers ──────────────────────────────────────────────────────────

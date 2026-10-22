@@ -1,0 +1,32 @@
+name: CI
+
+# Coolify deploys master by building the Dockerfile on the server; this checks
+# every push and pull request first, so a broken build shows up here.
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --locked
+
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image Coolify deploys
+        run: docker build --tag smert .
+      - name: Check the image starts and serves pages
+        run: |
+          docker run --detach --name smert --publish 1212:1212 smert
+          for i in $(seq 1 15); do
+            curl -fsS -o /dev/null http://127.0.0.1:1212/admin && exit 0
+            sleep 1
+          done
+          docker logs smert
+          exit 1

@@ -1,0 +1,9 @@
+# Only what the build needs. In particular, keep out static/ (the legacy
+# images, ~300 MB) and data/ (your local database).
+*
+!Cargo.toml
+!Cargo.lock
+!build.rs
+!src
+!migrations
+!templates

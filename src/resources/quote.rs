@@ -1,12 +1,16 @@
 use crate::error::Result;
-use crate::resources::DailyResource;
+use crate::resources::Resource;
 use askama::Template;
 use serde::{Deserialize, Serialize};
+use sqlx::{SqliteExecutor, SqlitePool};
 use std::collections::HashSet;
 
-#[derive(Debug, Clone, Deserialize, Serialize, Template)]
+#[derive(Debug, Clone, Deserialize, Serialize, Template, sqlx::FromRow)]
 #[template(path = "qotd.html")]
 pub struct Quote {
+    /// Absent in the legacy JSON files; assigned by the database.
+    #[serde(default)]
+    pub id: i64,
     pub text: String,
     pub author: String,
     pub work: Option<String>,
@@ -14,29 +18,30 @@ pub struct Quote {
     pub language: String,
 }
 
-impl DailyResource for Quote {}
-
-// Thin shim so main.rs call-sites are unchanged.
-pub fn load_quotes() -> Result<Vec<Quote>> {
-    let raw = std::fs::read_to_string("./quotes.json")?;
-    serde_json::from_str::<Vec<Quote>>(&raw).map_err(Into::into)
+impl Resource for Quote {
+    const SELECT: &'static str = "SELECT id, text, author, work, date, language FROM quotes";
 }
 
-pub fn add_quote(quote: Quote) -> Result<()> {
-    let mut quotes = load_quotes()?;
-    quotes.push(quote);
-    let json = serde_json::to_string_pretty(&quotes)?;
-    std::fs::write("./quotes.json", json)?;
+/// All quotes, newest first.
+pub async fn all(pool: &SqlitePool) -> Result<Vec<Quote>> {
+    let sql = format!("{} ORDER BY id DESC", Quote::SELECT);
+    Ok(sqlx::query_as(&sql).fetch_all(pool).await?)
+}
+
+pub async fn add<'e>(db: impl SqliteExecutor<'e>, quote: &Quote) -> Result<()> {
+    sqlx::query("INSERT INTO quotes (text, author, work, date, language) VALUES (?, ?, ?, ?, ?)")
+        .bind(&quote.text)
+        .bind(&quote.author)
+        .bind(&quote.work)
+        .bind(&quote.date)
+        .bind(&quote.language)
+        .execute(db)
+        .await?;
     Ok(())
 }
 
-pub fn delete_quote(index: usize) -> Result<()> {
-    let mut quotes = load_quotes()?;
-    if index < quotes.len() {
-        quotes.remove(index);
-        let json = serde_json::to_string_pretty(&quotes)?;
-        std::fs::write("./quotes.json", json)?;
-    }
+pub async fn delete(pool: &SqlitePool, id: i64) -> Result<()> {
+    sqlx::query("DELETE FROM quotes WHERE id = ?").bind(id).execute(pool).await?;
     Ok(())
 }
 

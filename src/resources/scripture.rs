@@ -1,11 +1,13 @@
 use crate::error::Result;
-use crate::resources::DailyResource;
+use crate::resources::Resource;
 use serde::{Deserialize, Serialize};
+use sqlx::{SqliteExecutor, SqlitePool};
 
-const DATA_FILE: &str = "./scriptures.json";
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, sqlx::FromRow)]
 pub struct Scripture {
+    /// Absent in the legacy JSON files; assigned by the database.
+    #[serde(default)]
+    pub id:          i64,
     pub book:        String,
     pub chapter:     u16,
     pub verse_start: u16,
@@ -29,28 +31,32 @@ impl Scripture {
     }
 }
 
-impl DailyResource for Scripture {}
-
-pub fn load_scriptures() -> Result<Vec<Scripture>> {
-    if !std::path::Path::new(DATA_FILE).exists() {
-        return Ok(vec![]);
-    }
-    let raw = std::fs::read_to_string(DATA_FILE)?;
-    serde_json::from_str::<Vec<Scripture>>(&raw).map_err(Into::into)
+impl Resource for Scripture {
+    const SELECT: &'static str =
+        "SELECT id, book, chapter, verse_start, verse_end, text FROM scriptures";
 }
 
-pub fn add_scripture(s: Scripture) -> Result<()> {
-    let mut all = load_scriptures()?;
-    all.push(s);
-    std::fs::write(DATA_FILE, serde_json::to_string_pretty(&all)?)?;
+/// All scriptures, newest first.
+pub async fn all(pool: &SqlitePool) -> Result<Vec<Scripture>> {
+    let sql = format!("{} ORDER BY id DESC", Scripture::SELECT);
+    Ok(sqlx::query_as(&sql).fetch_all(pool).await?)
+}
+
+pub async fn add<'e>(db: impl SqliteExecutor<'e>, s: &Scripture) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO scriptures (book, chapter, verse_start, verse_end, text) VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(&s.book)
+    .bind(s.chapter)
+    .bind(s.verse_start)
+    .bind(s.verse_end)
+    .bind(&s.text)
+    .execute(db)
+    .await?;
     Ok(())
 }
 
-pub fn delete_scripture(index: usize) -> Result<()> {
-    let mut all = load_scriptures()?;
-    if index < all.len() {
-        all.remove(index);
-        std::fs::write(DATA_FILE, serde_json::to_string_pretty(&all)?)?;
-    }
+pub async fn delete(pool: &SqlitePool, id: i64) -> Result<()> {
+    sqlx::query("DELETE FROM scriptures WHERE id = ?").bind(id).execute(pool).await?;
     Ok(())
 }

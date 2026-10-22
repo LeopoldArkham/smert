@@ -1,62 +1,56 @@
 use crate::error::Result;
+use crate::resources::Resource;
 use serde::{Deserialize, Serialize};
+use sqlx::{SqliteExecutor, SqlitePool};
 
-const DATA_FILE_EN: &str = "./definitions_en.json";
-const DATA_FILE_FR: &str = "./definitions_fr.json";
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, sqlx::FromRow)]
 pub struct Definition {
+    /// Absent in the legacy JSON files; assigned by the database.
+    #[serde(default)]
+    pub id:          i64,
     pub word:        String,
     /// Translation of the word into the other language.
     /// Old JSON files stored a grammatical category here under the key
-    /// "part_of_speech"; the alias lets us load those files transparently
-    /// until backfill_translations() overwrites them with real translations.
+    /// "part_of_speech"; the alias lets the importer read those files.
     #[serde(alias = "part_of_speech")]
     pub translation: String,
     pub definition:  String,
 }
 
-fn data_file(lang: &str) -> &'static str {
-    if lang == "french" { DATA_FILE_FR } else { DATA_FILE_EN }
+impl Resource for Definition {
+    const SELECT: &'static str = "SELECT id, word, translation, definition FROM definitions";
 }
 
-pub fn load_definitions(lang: &str) -> Result<Vec<Definition>> {
-    let path = data_file(lang);
-    if !std::path::Path::new(path).exists() {
-        return Ok(vec![]);
-    }
-    let raw = std::fs::read_to_string(path)?;
-    serde_json::from_str::<Vec<Definition>>(&raw).map_err(Into::into)
+/// All definitions in `lang` ("english" or "french"), newest first.
+pub async fn all(pool: &SqlitePool, lang: &str) -> Result<Vec<Definition>> {
+    let sql = format!("{} WHERE language = ? ORDER BY id DESC", Definition::SELECT);
+    Ok(sqlx::query_as(&sql).bind(lang).fetch_all(pool).await?)
 }
 
-pub fn delete_definition(lang: &str, index: usize) -> Result<()> {
-    let mut defs = load_definitions(lang)?;
-    if index < defs.len() {
-        defs.remove(index);
-        std::fs::write(data_file(lang), serde_json::to_string_pretty(&defs)?)?;
-    }
+pub async fn add<'e>(db: impl SqliteExecutor<'e>, lang: &str, def: &Definition) -> Result<()> {
+    sqlx::query("INSERT INTO definitions (language, word, translation, definition) VALUES (?, ?, ?, ?)")
+        .bind(lang)
+        .bind(&def.word)
+        .bind(&def.translation)
+        .bind(&def.definition)
+        .execute(db)
+        .await?;
     Ok(())
 }
 
-/// Fetch the definition + translation and append to the JSON file.
-pub async fn fetch_and_add(word: &str, lang: &str) -> Result<()> {
+pub async fn delete(pool: &SqlitePool, id: i64) -> Result<()> {
+    sqlx::query("DELETE FROM definitions WHERE id = ?").bind(id).execute(pool).await?;
+    Ok(())
+}
+
+/// Fetch the definition + translation and store it.
+pub async fn fetch_and_add(pool: &SqlitePool, word: &str, lang: &str) -> Result<()> {
     let def = if lang == "french" {
         fetch_fr(word).await?
     } else {
         fetch_en(word).await?
     };
-    let mut defs = load_definitions(lang)?;
-    defs.push(def);
-    std::fs::write(data_file(lang), serde_json::to_string_pretty(&defs)?)?;
-    Ok(())
-}
-
-
-/// Pick one definition at random (returns a Vec for consistency with other resources).
-pub fn pick_one(defs: &[Definition]) -> Vec<Definition> {
-    use rand::seq::IndexedRandom;
-    let mut rng = rand::rng();
-    defs.choose(&mut rng).cloned().into_iter().collect()
+    add(pool, lang, &def).await
 }
 
 // ── Translation via English Wiktionary ───────────────────────────────────────
@@ -225,6 +219,7 @@ async fn fetch_en(word: &str) -> Result<Definition> {
     let translation = fetch_translation(word, "en", "fr").await.unwrap_or_default();
 
     Ok(Definition {
+        id:          0,
         word:        word.to_string(),
         translation,
         definition:  defs.join("\n"),
@@ -276,6 +271,7 @@ async fn fetch_fr(word: &str) -> Result<Definition> {
     let translation = fetch_translation(word, "fr", "en").await.unwrap_or_default();
 
     Ok(Definition {
+        id: 0,
         word: word.to_string(),
         translation,
         definition,

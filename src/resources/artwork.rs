@@ -1,9 +1,9 @@
 use crate::error::Result;
-use crate::resources::DailyResource;
+use crate::resources::Resource;
 use askama::Template;
 use serde::{Deserialize, Serialize};
+use sqlx::{SqliteExecutor, SqlitePool};
 
-const DATA_FILE: &str = "./artworks.json";
 const IMAGE_DIR: &str = "./static/artwork";
 const THUMB_DIR: &str = "./static/artwork/thumbs";
 /// Max width (px) requested when importing a Commons image — keeps downloads
@@ -13,9 +13,12 @@ const MAX_IMAGE_WIDTH: u32 = 3840;
 /// whole server. 64 MB comfortably covers a 4K-wide JPEG.
 const MAX_DOWNLOAD_BYTES: u64 = 64 * 1024 * 1024;
 
-#[derive(Debug, Clone, Deserialize, Serialize, Template)]
+#[derive(Debug, Clone, Deserialize, Serialize, Template, sqlx::FromRow)]
 #[template(path = "artwork.html")]
 pub struct Artwork {
+    /// Absent in the legacy JSON files; assigned by the database.
+    #[serde(default)]
+    pub id:        i64,
     pub url:       String,
     pub filename:  String,
     #[serde(default)]
@@ -25,7 +28,10 @@ pub struct Artwork {
     pub date:      String,
 }
 
-impl DailyResource for Artwork {}
+impl Resource for Artwork {
+    const SELECT: &'static str =
+        "SELECT id, url, filename, thumbnail, artist, work, date FROM artworks";
+}
 
 /// Metadata resolved from a Wikipedia / Wikidata URL, ready to pre-fill the
 /// manual "add artwork" form. `url` is the highest-resolution image URL.
@@ -37,15 +43,28 @@ pub struct ResolvedArtwork {
     pub date:   String,
 }
 
-pub fn load_artworks() -> Result<Vec<Artwork>> {
-    if !std::path::Path::new(DATA_FILE).exists() {
-        return Ok(vec![]);
-    }
-    let raw = std::fs::read_to_string(DATA_FILE)?;
-    serde_json::from_str::<Vec<Artwork>>(&raw).map_err(Into::into)
+/// All artworks, newest first.
+pub async fn all(pool: &SqlitePool) -> Result<Vec<Artwork>> {
+    let sql = format!("{} ORDER BY id DESC", Artwork::SELECT);
+    Ok(sqlx::query_as(&sql).fetch_all(pool).await?)
 }
 
-pub async fn download_and_add(url: &str, artist: &str, work: &str, date: &str) -> Result<()> {
+pub async fn add<'e>(db: impl SqliteExecutor<'e>, a: &Artwork) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO artworks (url, filename, thumbnail, artist, work, date) VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(&a.url)
+    .bind(&a.filename)
+    .bind(&a.thumbnail)
+    .bind(&a.artist)
+    .bind(&a.work)
+    .bind(&a.date)
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+pub async fn download_and_add(pool: &SqlitePool, url: &str, artist: &str, work: &str, date: &str) -> Result<()> {
     std::fs::create_dir_all(IMAGE_DIR)?;
     std::fs::create_dir_all(THUMB_DIR)?;
 
@@ -109,6 +128,7 @@ pub async fn download_and_add(url: &str, artist: &str, work: &str, date: &str) -
     let thumbnail = make_thumbnail(&dest, &filename).ok();
 
     let artwork = Artwork {
+        id: 0,
         url: url.to_string(),
         filename,
         thumbnail,
@@ -117,10 +137,7 @@ pub async fn download_and_add(url: &str, artist: &str, work: &str, date: &str) -
         date: date.to_string(),
     };
 
-    let mut artworks = load_artworks()?;
-    artworks.push(artwork);
-    std::fs::write(DATA_FILE, serde_json::to_string_pretty(&artworks)?)?;
-    Ok(())
+    add(pool, &artwork).await
 }
 
 /// Resolve artwork metadata + a highest-resolution image URL from a Wikipedia
@@ -265,16 +282,14 @@ fn claim_year(entity: &serde_json::Value, prop: &str) -> String {
     }
 }
 
-pub fn delete_artwork(index: usize) -> Result<()> {
-    let mut artworks = load_artworks()?;
-    if index < artworks.len() {
-        let a = &artworks[index];
-        let _ = std::fs::remove_file(format!("{}/{}", IMAGE_DIR, a.filename));
-        if let Some(ref thumb) = a.thumbnail {
-            let _ = std::fs::remove_file(format!("{}/{}", THUMB_DIR, thumb));
-        }
-        artworks.remove(index);
-        std::fs::write(DATA_FILE, serde_json::to_string_pretty(&artworks)?)?;
+pub async fn delete(pool: &SqlitePool, id: i64) -> Result<()> {
+    let Some(a) = super::get::<Artwork>(pool, id).await? else {
+        return Ok(());
+    };
+    sqlx::query("DELETE FROM artworks WHERE id = ?").bind(id).execute(pool).await?;
+    let _ = std::fs::remove_file(format!("{}/{}", IMAGE_DIR, a.filename));
+    if let Some(ref thumb) = a.thumbnail {
+        let _ = std::fs::remove_file(format!("{}/{}", THUMB_DIR, thumb));
     }
     Ok(())
 }

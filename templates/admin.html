@@ -389,7 +389,7 @@
         <div class="quote-text">"{{ q.text }}"</div>
         <div class="quote-meta">— <button type="button" class="filter-btn" data-filter="author" data-value="{{ q.author }}">{{ q.author }}</button>{% if let Some(w) = q.work %}, <em><button type="button" class="filter-btn" data-filter="work" data-value="{{ w }}">{{ w }}</button></em>{% if let Some(d) = q.date %}, {{ d }}{% endif %}{% endif %}</div>
         <form method="post" action="/admin/quotes/delete" class="delete-form">
-          <input type="hidden" name="index" value="{{ quote_count - 1 - loop.index0 }}">
+          <input type="hidden" name="id" value="{{ q.id }}">
           <button type="submit" class="delete-btn" title="Delete">×</button>
         </form>
       </li>
@@ -441,7 +441,7 @@
         <span class="artwork-meta"><button type="button" class="filter-btn" data-value="{{ a.artist }}">{{ a.artist }}</button>, {{ a.date }}</span>
       </div>
       <form method="post" action="/admin/artworks/delete" class="delete-form">
-        <input type="hidden" name="index" value="{{ artwork_count - 1 - loop.index0 }}">
+        <input type="hidden" name="id" value="{{ a.id }}">
         <button type="submit" class="delete-btn" title="Delete">×</button>
       </form>
     </li>
@@ -566,7 +566,7 @@
           </a>
         </div>
         <form method="post" action="/admin/scriptures/delete" class="delete-form">
-          <input type="hidden" name="index" value="{{ scripture_count - 1 - loop.index0 }}">
+          <input type="hidden" name="id" value="{{ s.id }}">
           <button type="submit" class="delete-btn" title="Delete">×</button>
         </form>
       </li>
@@ -600,7 +600,7 @@
             {% if !d.translation.is_empty() %}<div class="word-pos">{{ d.translation }}</div>{% endif %}
             {% if !d.definition.is_empty() %}<div class="word-def">{{ d.definition }}</div>{% endif %}
             <form method="post" action="/admin/definitions/delete" class="delete-form">
-              <input type="hidden" name="index" value="{{ definitions_fr_count - 1 - loop.index0 }}">
+              <input type="hidden" name="id" value="{{ d.id }}">
               <input type="hidden" name="lang" value="french">
               <button type="submit" class="delete-btn" title="Delete">×</button>
             </form>
@@ -617,7 +617,7 @@
             {% if !d.translation.is_empty() %}<div class="word-pos">{{ d.translation }}</div>{% endif %}
             {% if !d.definition.is_empty() %}<div class="word-def">{{ d.definition }}</div>{% endif %}
             <form method="post" action="/admin/definitions/delete" class="delete-form">
-              <input type="hidden" name="index" value="{{ definitions_en_count - 1 - loop.index0 }}">
+              <input type="hidden" name="id" value="{{ d.id }}">
               <input type="hidden" name="lang" value="english">
               <button type="submit" class="delete-btn" title="Delete">×</button>
             </form>

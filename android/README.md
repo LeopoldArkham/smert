@@ -8,9 +8,9 @@ home screen).
 - Fetches when the screen turns on (at most every 15 minutes, so rerolls show
   up), and just after the 05:00 rollover. The last response is kept for when
   the phone is offline.
-- Text is laid out in the band between the lock-screen clock and the bottom
-  shortcuts (`AREA_TOP` / `AREA_BOTTOM` in `WordsWallpaperService.kt`),
-  shrinking to fit long definitions.
+- Text starts just below the lock-screen clock and stays above the bottom
+  shortcuts (`AREA_TOP` / `AREA_BOTTOM` in `WordsWallpaperService.kt`, measured
+  for the one-line clock style), shrinking to fit long definitions.
 - Font: Baskervville (SIL Open Font License, see `licenses/`).
 
 ## Building

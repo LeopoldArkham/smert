@@ -34,15 +34,18 @@ private val SOFT = Color.parseColor("#c4bdb5")
 
 /**
  * The free band of the lock screen, as fractions of its height: below the
- * clock and date, above the owner message and the shortcut buttons.
+ * clock and date, above the owner message and the shortcut buttons. The text
+ * starts at the top of the band. Measured on the S24 Ultra with its one-line
+ * stencil clock: the date ends at 28.6% (669 px of 2340), so 30.3% leaves
+ * ~40 px of padding. A taller clock style needs this raised again.
  */
-private const val AREA_TOP = 0.40f
+private const val AREA_TOP = 0.303f
 private const val AREA_BOTTOM = 0.84f
 
 /** Text shrinks down to this fraction of its normal size to fit. */
 private const val MIN_SCALE = 0.55f
 
-private val LANGUAGES = listOf("french" to "FRANÇAIS", "english" to "ENGLISH")
+private val LANGUAGES = listOf("french", "english")
 
 /**
  * Lock-screen wallpaper showing one of smert's two daily words, with its full
@@ -175,11 +178,11 @@ class WordsWallpaperService : WallpaperService() {
             val bottom = h * AREA_BOTTOM
 
             val json = cached()
-            val entry = json?.let { pickWord(it) }
-            val blocks = if (entry == null) {
+            val word = json?.let { pickWord(it) }
+            val blocks = if (word == null) {
                 listOf(Block("Loading today's words…", sizeFor(w, 0.04f), serifItalic, MUTED))
             } else {
-                wordBlocks(entry.first, entry.second, w)
+                wordBlocks(word, w)
             }
 
             // Shrink until everything fits the free band; at the smallest size,
@@ -194,8 +197,7 @@ class WordsWallpaperService : WallpaperService() {
                 layouts = fitByTruncating(blocks, width, scale, bottom - top)
             }
 
-            // Centre the text in the free band.
-            var y = top + ((bottom - top) - height(layouts, scale)) / 2
+            var y = top
             for ((block, layout) in layouts) {
                 y += block.spaceBefore * scale
                 canvas.save()
@@ -207,19 +209,17 @@ class WordsWallpaperService : WallpaperService() {
         }
 
         /** Today's word in the current language, or the other one if missing. */
-        private fun pickWord(json: JSONObject): Pair<String, JSONObject>? {
+        private fun pickWord(json: JSONObject): JSONObject? {
             val start = prefs.getInt("language", 0) % LANGUAGES.size
             for (i in LANGUAGES.indices) {
-                val (key, label) = LANGUAGES[(start + i) % LANGUAGES.size]
-                json.optJSONObject(key)?.let { return label to it }
+                json.optJSONObject(LANGUAGES[(start + i) % LANGUAGES.size])?.let { return it }
             }
             return null
         }
 
-        private fun wordBlocks(label: String, word: JSONObject, w: Float): List<Block> {
+        private fun wordBlocks(word: JSONObject, w: Float): List<Block> {
             val blocks = mutableListOf(
-                Block(label, sizeFor(w, 0.026f), Typeface.SANS_SERIF, MUTED, letterSpacing = 0.15f),
-                Block(word.optString("word"), sizeFor(w, 0.085f), serif, INK, spaceBefore = w * 0.01f),
+                Block(word.optString("word"), sizeFor(w, 0.085f), serif, INK),
             )
             word.optString("translation").takeIf { it.isNotBlank() }?.let {
                 blocks += Block(it, sizeFor(w, 0.045f), serifItalic, SOFT)
@@ -278,11 +278,13 @@ class WordsWallpaperService : WallpaperService() {
                 textSize = block.size * scale
                 typeface = block.typeface
                 color = block.color
-                letterSpacing = block.letterSpacing
             }
             return StaticLayout.Builder.obtain(block.text, 0, block.text.length, paint, width)
                 .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                 .setLineSpacing(0f, 1.15f)
+                // No extra font padding, so the first line starts right at the
+                // top of the band and the gap below the clock is what we set.
+                .setIncludePad(false)
                 .setMaxLines(maxLines)
                 .setEllipsize(TextUtils.TruncateAt.END)
                 .build()
@@ -294,7 +296,6 @@ class WordsWallpaperService : WallpaperService() {
         val size: Float,
         val typeface: Typeface,
         val color: Int,
-        val letterSpacing: Float = 0f,
         val spaceBefore: Float = 0f,
         val isDefinition: Boolean = false,
     )

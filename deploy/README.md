@@ -47,16 +47,19 @@ cat ~/.ssh/id_ed25519.pub
 
 On the server, append that line to `/root/.ssh/authorized_keys`.
 
-### 4. Copy your data, once
+### 4. Copy your data into the volume
 
 ```bash
-cargo run -- import
-deploy/seed.sh root@167.233.56.221 VOLUME_NAME
+deploy/seed.sh root@167.233.56.221 VOLUME_NAME [DATA_DIR]
 ```
 
-Skip the import if `data/smert.db` already exists. `seed.sh` stops the app,
+`DATA_DIR` (default `./data`) is a smert data folder: `smert.db` plus
+`images/`, like the one a local `cargo run` creates. `seed.sh` stops the app,
 copies the database and images into the volume, and starts it again. It
 refuses if the server's database already has content.
+
+The live volume is `dx63m4krbosa1k4t6nitmay6-smert-data`, seeded on
+2026-10-22.
 
 ## Day to day
 

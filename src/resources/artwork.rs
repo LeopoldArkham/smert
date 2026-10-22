@@ -99,16 +99,14 @@ pub async fn all(pool: &SqlitePool) -> Result<Vec<Artwork>> {
     Ok(sqlx::query_as(&sql).fetch_all(pool).await?)
 }
 
-/// Insert the artwork and write its image file. `thumbnail` is an existing
-/// thumbnail to reuse; without one, it is generated from `image`. Runs on
-/// `conn` so a caller's transaction also undoes the insert if a write fails.
+/// Insert the artwork, write its image file and generate its thumbnail. Runs
+/// on `conn` so a caller's transaction also undoes the insert if a write fails.
 pub async fn add(
     conn:       &mut SqliteConnection,
     images_dir: &Path,
     new:        &NewArtwork<'_>,
     ext:        &str,
     image:      &[u8],
-    thumbnail:  Option<&[u8]>,
 ) -> Result<i64> {
     let id: i64 = sqlx::query_scalar(
         "INSERT INTO artworks (url, ext, artist, work, date) VALUES (?, ?, ?, ?, ?) RETURNING id",
@@ -125,10 +123,7 @@ pub async fn add(
     std::fs::write(image_path(images_dir, id, ext), image)?;
 
     let thumb = thumb_path(images_dir, id);
-    let has_thumb = match thumbnail {
-        Some(bytes) => std::fs::write(&thumb, bytes).is_ok(),
-        None        => make_thumbnail(image, &thumb).is_ok(),
-    };
+    let has_thumb = make_thumbnail(image, &thumb).is_ok();
     sqlx::query("UPDATE artworks SET has_thumb = ? WHERE id = ?")
         .bind(has_thumb)
         .bind(id)
@@ -193,7 +188,7 @@ pub async fn download_and_add(pool: &SqlitePool, images_dir: &Path, new: &NewArt
     }
 
     let mut tx = pool.begin().await?;
-    add(&mut tx, images_dir, new, ext, &bytes, None).await?;
+    add(&mut tx, images_dir, new, ext, &bytes).await?;
     tx.commit().await?;
     Ok(())
 }

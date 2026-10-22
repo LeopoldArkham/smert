@@ -1,12 +1,9 @@
 use crate::error::Result;
 use crate::resources::Resource;
-use serde::{Deserialize, Serialize};
 use sqlx::{SqliteExecutor, SqlitePool};
 
-#[derive(Debug, Clone, Deserialize, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Scripture {
-    /// Absent in the legacy JSON files; assigned by the database.
-    #[serde(default)]
     pub id:          i64,
     pub book:        String,
     pub chapter:     u16,

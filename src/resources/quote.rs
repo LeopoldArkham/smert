@@ -1,15 +1,13 @@
 use crate::error::Result;
 use crate::resources::Resource;
 use askama::Template;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use sqlx::{SqliteExecutor, SqlitePool};
 use std::collections::HashSet;
 
-#[derive(Debug, Clone, Deserialize, Serialize, Template, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Template, sqlx::FromRow)]
 #[template(path = "qotd.html")]
 pub struct Quote {
-    /// Absent in the legacy JSON files; assigned by the database.
-    #[serde(default)]
     pub id: i64,
     pub text: String,
     pub author: String,

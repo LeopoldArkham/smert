@@ -2,7 +2,6 @@ mod config;
 mod daily;
 mod db;
 mod error;
-mod import;
 mod resources;
 
 use config::Config;
@@ -138,23 +137,6 @@ async fn main() {
         eprintln!("failed to open database {}: {e}", config.database_path().display());
         std::process::exit(1);
     });
-
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    match args.first().map(String::as_str) {
-        None => {}
-        Some("import") => {
-            let dir = args.get(1).map(String::as_str).unwrap_or(".");
-            if let Err(e) = import::run(&pool, &config.images_dir(), Path::new(dir)).await {
-                eprintln!("import failed: {e}");
-                std::process::exit(1);
-            }
-            return;
-        }
-        Some(other) => {
-            eprintln!("unknown command {other:?}; usage: smert [import [DIR]]");
-            std::process::exit(2);
-        }
-    }
 
     let state = AppState { pool, images_dir: config.images_dir().into() };
     println!("Server listening on http://{}", config.bind);

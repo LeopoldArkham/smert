@@ -1,18 +1,13 @@
 use crate::error::Result;
 use crate::resources::Resource;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sqlx::{SqliteExecutor, SqlitePool};
 
-#[derive(Debug, Clone, Deserialize, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Definition {
-    /// Absent in the legacy JSON files; assigned by the database.
-    #[serde(default)]
     pub id:          i64,
     pub word:        String,
     /// Translation of the word into the other language.
-    /// Old JSON files stored a grammatical category here under the key
-    /// "part_of_speech"; the alias lets the importer read those files.
-    #[serde(alias = "part_of_speech")]
     pub translation: String,
     pub definition:  String,
 }

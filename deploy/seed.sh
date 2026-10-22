@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Copy your local data folder (database + images) into smert's Coolify volume,
-# once. Run from the repo root on your Mac:
+# Copy a local data folder (database + images) into smert's Coolify volume.
+# Run from the repo root on your Mac:
 #
 #   deploy/seed.sh root@<server> <volume name> [local data dir, default ./data]
 #
@@ -18,7 +18,7 @@ volume=$2
 data=${3:-data}
 
 if [ ! -f "$data/smert.db" ]; then
-  echo "No $data/smert.db. Create it first with: cargo run -- import" >&2
+  echo "No $data/smert.db: expected a smert data folder (smert.db + images/)." >&2
   exit 1
 fi
 

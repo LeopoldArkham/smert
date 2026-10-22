@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&display=swap" rel="stylesheet">
+  <title>Today</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      background-color: #21222d;
+      overflow: hidden;
+    }
+
+    /* Each panel fills the viewport and stacks in place */
+    .panel {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 5vh 5vw;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+
+    .panel.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ── Quote ──────────────────────────────────────────────────── */
+    .quote-text {
+      font-family: "Baskervville", serif;
+      font-size: clamp(1.4rem, 3vw, 2.2rem);
+      color: #fff6ec;
+      text-align: center;
+      line-height: 1.55;
+      max-width: 90vw;
+    }
+
+    .quote-author {
+      font-family: "Baskervville", serif;
+      font-style: italic;
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      color: #c4bdb5;
+      margin-top: 1.25rem;
+      text-align: center;
+    }
+
+    /* ── Artwork ────────────────────────────────────────────────── */
+    #panel-artwork {
+      padding: 4vh 5vw;
+    }
+
+    #panel-artwork img {
+      max-width: 100%;
+      max-height: 85vh;
+      object-fit: contain;
+    }
+
+    .artwork-caption {
+      font-family: "Baskervville", serif;
+      font-style: italic;
+      font-size: 1.3rem;
+      color: #fff6ec;
+      margin-top: 1.25rem;
+      text-align: center;
+    }
+
+    .artwork-meta {
+      font-family: "Baskervville", serif;
+      font-size: 1rem;
+      color: #7a7870;
+      margin-top: 0.4rem;
+      text-align: center;
+    }
+
+    /* ── Scripture overlay ──────────────────────────────────────── */
+    #panel-scripture {
+      z-index: 10;
+      background-color: #21222d;
+      padding: 6vh 8vw;
+      text-align: center;
+    }
+
+    .scripture-text {
+      font-family: "Baskervville", serif;
+      font-size: clamp(1.3rem, 2.6vw, 2rem);
+      color: #fff6ec;
+      line-height: 1.65;
+      max-width: 720px;
+      white-space: pre-line;
+    }
+
+    .scripture-ref {
+      font-family: "Baskervville", serif;
+      font-style: italic;
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      color: #c4bdb5;
+      margin-top: 1.25rem;
+      text-decoration: none;
+      border-bottom: 1px dotted #4a4a5a;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .scripture-ref:hover {
+      color: #fff6ec;
+      border-color: #c4bdb5;
+    }
+
+    /* ── Words ──────────────────────────────────────────────────── */
+    #panel-wotd {
+      padding: 5vh 8vw;
+    }
+
+    .words {
+      display: flex;
+      align-items: flex-start;
+      gap: 5vw;
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .word-block {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .divider {
+      width: 1px;
+      min-height: 120px;
+      align-self: stretch;
+      background: #32333f;
+      flex-shrink: 0;
+    }
+
+    .word-lang {
+      font-family: system-ui, sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #7a7870;
+      margin-bottom: 0.6rem;
+    }
+
+    .word-text {
+      font-family: "Baskervville", serif;
+      font-style: italic;
+      font-size: clamp(2rem, 4vw, 3rem);
+      color: #fff6ec;
+      line-height: 1.15;
+    }
+
+    .word-pos {
+      font-family: system-ui, sans-serif;
+      font-size: 0.8rem;
+      color: #7a7870;
+      margin-top: 0.35rem;
+    }
+
+    .word-def {
+      font-family: "Baskervville", serif;
+      font-size: 1.1rem;
+      color: #c4bdb5;
+      margin-top: 0.75rem;
+      line-height: 1.65;
+      white-space: pre-line;
+    }
+
+    .empty {
+      font-family: "Baskervville", serif;
+      font-style: italic;
+      color: #7a7870;
+    }
+
+    .dict-link {
+      display: inline-block;
+      margin-top: 1rem;
+      font-family: system-ui, sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #3d3e50;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .dict-link:hover {
+      color: #7a7870;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Panel 0: Quote -->
+  <div id="panel-quote" class="panel active">
+    <div class="quote-text">"{{ quote.text }}"</div>
+    <div class="quote-author">— {{ quote.author }}{% if let Some(w) = quote.work %}, <em>{{ w }}</em>{% if let Some(d) =
+      quote.date %}, {{ d }}{% endif %}{% endif %}</div>
+  </div>
+
+  <!-- Panel 1: Artwork -->
+  <div id="panel-artwork" class="panel">
+    {% if let Some(a) = artwork %}
+    <img src="/static/artwork/{{ a.filename }}" alt="{{ a.work }}">
+    <div class="artwork-caption">{{ a.work }}</div>
+    <div class="artwork-meta">{{ a.artist }}, {{ a.date }}</div>
+    {% else %}
+    <div class="empty" style="font-family:'Baskervville',serif;font-style:italic;color:#7a7870">No artwork yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- Scripture overlay (up to reveal, down to hide) -->
+  <div id="panel-scripture" class="panel">
+    {% if let Some(s) = scripture %}
+    <div class="scripture-text">"{{ s.text }}"</div>
+    <a class="scripture-ref" href="{{ s.bible_gateway_url() }}" target="_blank" rel="noopener noreferrer">{{
+      s.reference() }}</a>
+    {% else %}
+    <div class="scripture-text" style="color:#7a7870;font-style:italic">No scripture yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- Panel 2: Words -->
+  <div id="panel-wotd" class="panel">
+    <div class="words">
+      <div class="word-block">
+        <div class="word-lang">Français</div>
+        {% if let Some(w) = word_fr %}
+        <div class="word-text">{{ w.word }}</div>
+        {% if !w.translation.is_empty() %}
+        <div class="word-pos">{{ w.translation }}</div>
+        {% endif %}
+        {% if !w.definition.is_empty() %}
+        <div class="word-def">{{ w.definition }}</div>
+        {% endif %}
+        <a class="dict-link" href="https://www.dictionnaire-academie.fr/recherche?query={{ w.word|urlencode }}"
+          target="_blank" rel="noopener noreferrer">Académie française ↗</a>
+        {% else %}
+        <div class="empty">Aucun mot pour l'instant.</div>
+        {% endif %}
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="word-block">
+        <div class="word-lang">English</div>
+        {% if let Some(w) = word_en %}
+        <div class="word-text">{{ w.word }}</div>
+        {% if !w.translation.is_empty() %}
+        <div class="word-pos">{{ w.translation }}</div>
+        {% endif %}
+        {% if !w.definition.is_empty() %}
+        <div class="word-def">{{ w.definition }}</div>
+        {% endif %}
+        <a class="dict-link" href="https://www.merriam-webster.com/dictionary/{{ w.word|urlencode }}" target="_blank"
+          rel="noopener noreferrer">Merriam-Webster ↗</a>
+        {% else %}
+        <div class="empty">No word yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const panels = ['panel-quote', 'panel-wotd', 'panel-artwork'];
+    let current = 0;
+    let scriptureVisible = false;
+    const scriptureEl = document.getElementById('panel-scripture');
+
+    function show(index) {
+      document.getElementById(panels[current]).classList.remove('active');
+      current = (index + panels.length) % panels.length;
+      document.getElementById(panels[current]).classList.add('active');
+    }
+
+    function showScripture() {
+      scriptureVisible = true;
+      scriptureEl.classList.add('active');
+    }
+
+    function hideScripture() {
+      scriptureVisible = false;
+      scriptureEl.classList.remove('active');
+    }
+
+    // Swipe support
+    let touchStartX = 0, touchStartY = 0;
+    document.addEventListener('touchstart', e => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    document.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 40) return; // too short
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (scriptureVisible) return;
+        dx < 0 ? show(current + 1) : show(current - 1);
+      } else {
+        dy < 0 ? showScripture() : hideScripture();
+      }
+    }, { passive: true });
+
+    document.addEventListener('keydown', e => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'ArrowUp') { e.preventDefault(); showScripture(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); hideScripture(); return; }
+      if (e.key === 'q') { location.href = '/admin'; return; }
+      if (scriptureVisible) return;
+      if (e.key === 'ArrowRight') show(current + 1);
+      if (e.key === 'ArrowLeft') show(current - 1);
+    });
+  </script>
+</body>
+
+</html>

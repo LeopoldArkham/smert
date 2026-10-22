@@ -1,1 +1,317 @@
-[{"text":"The simple step of a courageous individual is not to take part in the lie. \nOne word of truth outweighs the world.","author":"Aleksandr Solzhenitsyn","work":"The Gulag Archipelago, 1974"}]
+[
+  {
+    "text": "The simple step of a courageous individual is not to take part in the lie. \nOne word of truth outweighs the world.",
+    "author": "Aleksandr Solzhenitsyn",
+    "work": "The Gulag Archipelago",
+    "date": "1974",
+    "language": "english"
+  },
+  {
+    "text": "Que nous importent les doctrines politiques qui prétendent épanouir les hommes, si nous ne connaissons d'abord quel type d'homme elles épanouiront.",
+    "author": "Antoine de Saint-Exupéry",
+    "work": "Terre des Hommes",
+    "date": "1939",
+    "language": "french"
+  },
+  {
+    "text": "Celui qui sauve sa patrie ne viole aucune loi.",
+    "author": "Napoleon Bonaparte",
+    "work": null,
+    "date": null,
+    "language": "french"
+  },
+  {
+    "text": "Un homme sans courage ni bravoure est une chose.",
+    "author": "Napoleon Bonaparte",
+    "work": null,
+    "date": null,
+    "language": "french"
+  },
+  {
+    "text": "Je crois à la mémoire des pierres. Elles absorbent l’écho des conversations, des pensées. Elles incorporent l’odeur des hommes. Les pierres sauvages des grottes et les pierres sages des églises rayonnent d’une force mantique. On est toujours saisi quand on pénètre sous une voûte de pierre qui a abrité les hommes.",
+    "author": "Sylvain Tesson",
+    "work": "Une très légère oscillation",
+    "date": "2017",
+    "language": "english"
+  },
+  {
+    "text": "On ne meurt point pour des moutons, ni pour des chèvres ni pour des demeures ni pour des montagnes. Car les objets subsistent sans que rien leur soit sacrifié. Mais on meurt pour sauver l'invisible nœud qui les noue et les change en domaine, en empire, en visage reconnaissable et familier.",
+    "author": "Antoine de Saint-Exupéry",
+    "work": "Citadelle",
+    "date": "1948",
+    "language": "french"
+  },
+  {
+    "text": "Mélancolie de ce paysage façonné par une force disparue. Le relief est la mémoire d’un ordre ancien. Parfois, en ville, le coeur se serrait de la même tristesse. On reconnaissait la trace d’une époque enfuie. Rien dans la notre n’égalait le passé. À Rome, des marchands de glaces colonisaient les pieds du Colisée. À Paris, des panneaux débiles brisaient les perspectives. Ici, une plage de sable trahissait l’ancien front morainique.",
+    "author": "Sylvain Tesson",
+    "work": "Avec les fées",
+    "date": "2024",
+    "language": "french"
+  },
+  {
+    "text": "Ô siècle béni (le douzième) ou la chevalerie arrima une société à ces vertus de force et de beauté. Alors, le haut et le bas, le pur et le malpropre, la clarté et l’obscurité, le bien et le mal, le blanc et le noir ne se valaient pas.",
+    "author": "Sylvain Tesson",
+    "work": "Avec les fées",
+    "date": "2024",
+    "language": "french"
+  },
+  {
+    "text": "Le principe monarchique élève au-dessus de lui-même celui à qui échoit la couronne. Le roi rassemble les hommes. Et les hommes sont heureux de confier à un autre qu’eux-mêmes le soin d’être plus grand que tous. Le roi n’est pas un être. C’est un principe.",
+    "author": "Sylvain Tesson",
+    "work": "Avec les fées",
+    "date": "2024",
+    "language": "english"
+  },
+  {
+    "text": "We have come from God, and inevitably the myths woven by us, though they contain error, will also reflect a splintered fragment of the true light, the eternal truth that is with God. Indeed only by myth-making, only by becoming 'sub-creator' and inventing stories, can Man aspire to the state of perfection that he knew before the Fall. Our myths may be misguided, but they steer however shakily towards the true harbour, while materialistic 'progress' leads only to a yawning abyss and the Iron Crown of the power of evil.",
+    "author": "J.R.R. Tolkien",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "Short cuts make long delays.",
+    "author": "J.R.R. Tolkien",
+    "work": "The Fellowship of the Ring",
+    "date": "1954",
+    "language": "english"
+  },
+  {
+    "text": "It must often be so, Sam, when things are in danger: some one has to give them up, lose them, so that others may keep them.",
+    "author": "J.R.R. Tolkien",
+    "work": "The Return of the King",
+    "date": "1955",
+    "language": "english"
+  },
+  {
+    "text": "I do not love the bright sword for its sharpness, nor the arrow for its swiftness, nor the warrior for his glory. I love only that which they defend.",
+    "author": "J.R.R. Tolkien",
+    "work": "The Two Towers",
+    "date": "1954",
+    "language": "english"
+  },
+  {
+    "text": "He that breaks a thing to find out what it is has left the path of wisdom.",
+    "author": "J.R.R. Tolkien",
+    "work": "The Fellowship of the Ring",
+    "date": "1954",
+    "language": "english"
+  },
+  {
+    "text": "In sorrow we must go, but not in despair. Behold! we are not bound for ever to the circles of the world, and beyond them is more than memory.",
+    "author": "J.R.R. Tolkien",
+    "work": "The Return of the King",
+    "date": "1955",
+    "language": "english"
+  },
+  {
+    "text": "Well, here at last, dear friends, on the shores of the Sea comes the end of our fellowship in Middle-earth. Go in peace! I will not say: do not weep; for not all tears are an evil.",
+    "author": "J.R.R. Tolkien",
+    "work": "The Return of the King",
+    "date": "1955",
+    "language": "english"
+  },
+  {
+    "text": "Begone, foul dwimmerlaik, lord of carrion! Leave the dead in peace!”\r\n\r\nA cold voice answered: ‘Come not between the Nazgûl and his prey! Or he will not slay thee in thy turn. He will bear thee away to the houses of lamentation, beyond all darkness, where thy flesh shall be devoured, and thy shriveled mind be left naked to the Lidless Eye.”\r\n\r\nA sword rang as it was drawn. “Do what you will; but I will hinder it, if I may.”\r\n\r\n“Hinder me? Thou fool. No living man may hinder me!”\r\n\r\nThen Merry heard of all sounds in that hour the strangest. It seemed that Dernhelm laughed, and the clear voice was like the ring of steel.\r\n\r\n“But no living man am I! You look upon a woman. Éowyn I am, Éomund’s daughter. You stand between me and my lord and kin. Begone, if you be not deathless! For living or dark undead, I will smite you, if you touch him.",
+    "author": "J.R.R. Tolkien",
+    "work": "The Return of the King",
+    "date": "1955",
+    "language": "english"
+  },
+  {
+    "text": "For myself, I find I become less cynical rather than more--remembering my own sins and follies; and realize that men's hearts are not often as bad as their acts, and very seldom as bad as their words.",
+    "author": "J.R.R. Tolkien",
+    "work": "Letters",
+    "date": "1960",
+    "language": "english"
+  },
+  {
+    "text": "Pay heed to the tales of old wives. It may well be that they alone keep in memory what it was once needful for the wise to know.",
+    "author": "J.R.R. Tolkien",
+    "work": "The Fellowship of the Ring",
+    "date": "1954",
+    "language": "english"
+  },
+  {
+    "text": "I cordially dislike allegory in all its manifestations, and always have done so since I grew old and wary enough to detect its presence. I much prefer history – true or feigned– with its varied applicability to the thought and experience of readers. I think that many confuse applicability with allegory, but the one resides in the freedom of the reader, and the other in the purposed domination of the author.",
+    "author": "J.R.R. Tolkien",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "You may live to see man-made horrors beyond your comprehension",
+    "author": "Nikola Tesla",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "Pas plus que la Révolution française la Révolution russe d'octobre 1917 ne fut la Révolution russe d'octobre 1917 ne fut l'explosion spontanée d'une révolte du peuple contre le régime monarchique.\r\nElle fut, au contraire, le résultat d'une longue manipulation de I'« intelligentsia » par des éléments non slaves.",
+    "author": "Jacques Bordiot",
+    "work": "Une main cachée dirige",
+    "date": "1974",
+    "language": "english"
+  },
+  {
+    "text": "Cet ordre impersonnel et divin de l'univers a pour image parmi nous la justice, la vérité, la beauté. Rien d'inférieur à ces choses n'est digne de servir d'inspiration aux hommes qui acceptent de mourir.",
+    "author": "Simone Weil",
+    "work": "La personne et le sacré",
+    "date": "1943",
+    "language": "french"
+  },
+  {
+    "text": "La tradition telle que je l'entends n'est pas le passé, mais au contraire ce qui ne passe pas et qui revient toujours sous des formes différentes. Elle désigne l'essence d'une civilisation sur la très longue durée ce qui résiste au temps et survit aux influences perturbatrices de religions, de modes ou d'idéologie importées.",
+    "author": "Dominique Venner",
+    "work": "Un samourai d'Occident.",
+    "date": "2013",
+    "language": "english"
+  },
+  {
+    "text": "La joie m'attriste quand elle est passée, les jours de fêtes ont toujours pour moi de tristes lendemains.",
+    "author": "Gustave Flaubert",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "\"Il faut marcher avec son siècle, disent les hommes qui prennent pour un siècle les courts moments où ils ont vécu.\r\nMais ce n'est pas avec un siècle, c'est avec tous les siècles qu'il faut marcher.",
+    "author": "Louis de Bonald",
+    "work": null,
+    "date": null,
+    "language": "french"
+  },
+  {
+    "text": "I declare that this government is no longer a constitutional and moral form of government. I will deal with it, and I will obey its laws, and I will support it when it is defending our country from foreign and domestic enemies. I will vote in its elections and participate in its political debates. But I will never accept it. I aim at a restoration of constitutional and moral order.",
+    "author": "Lawrence Auster",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "Under conditions of peace, the warlike man attacks himself",
+    "author": "Friedrich Nietzsche",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "Celui-là qui veille modestement quelques moutons sous les étoiles, s'il prend conscience de son rôle, se découvre plus qu'un serviteur. Il est une sentinelle. Et chaque sentinelle est responsable de tout l'empire.",
+    "author": "Antoine de Saint-Exupéry",
+    "work": "Terre des Hommes",
+    "date": "1939",
+    "language": "french"
+  },
+  {
+    "text": "Once the government becomes the supplier of people's needs,\r\nthere is no limit to the needs that will be claimed as a basic right.",
+    "author": "Lawrence Auster",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "Être homme, c’est précisément être responsable. C’est connaître la honte en face d’une misère qui ne semblait pas dépendre de soi. C’est être fier d’une victoire que les camarades ont remportée. C’est sentir, en posant sa pierre, que l’on contribue à bâtir le monde.",
+    "author": "Antoine de Saint-Exupéry",
+    "work": "Terre des Hommes",
+    "date": "1939",
+    "language": "french"
+  },
+  {
+    "text": "Péguy a été un prophète. L’argent a toujours joué un rôle dans la vie des sociétés, bien entendu, mais il coexistait avec d’autres systèmes, le système de l’honneur dans les classes aristocratiques, le système de la solidarité dans les classes populaires, le système de la charité dans l’ordre chrétien. Ce que Péguy appelle le monde moderne, c’est le moment où le système de l’argent l’emporte définitivement sur tous les autres et devient l’étalon universel. Le capitalisme, de ce point de vue, est moins le système de l’appropriation privée des moyens de production que le système de l’équivalence universelle représentée par l’argent.",
+    "author": "Jacques Julliard",
+    "work": "in Éléments n°159",
+    "date": "2016",
+    "language": "english"
+  },
+  {
+    "text": "En tant qu’archétypes, le masculin et le féminin sont les deux pôles opposés et indispensables de la vie. Indispensables parce que complémentaires. Si l’un des pôles disparaît, tout se détraque. Le masculin seul engendrerait un monde de brutalité et de mort. Le féminin seul, c’est notre monde : les pères ont disparu, les enfants sont devenus des petits monstres capricieux, mous et tyranniques. Les criminels ne sont pas coupables, mais des victimes ou des malades qu’il faut dorloter. Les psys se multiplient tandis que les psychopathes monstrueux narguent leurs victimes et ricanent au nez des juges.",
+    "author": "Dominique Venner",
+    "work": "Un samouraï d’Occident",
+    "date": "2022",
+    "language": "french"
+  },
+  {
+    "text": "L’intelligence est spontanément aristocratique, car c’est la faculté de distinguer les différences et de fixer les rangs.",
+    "author": "Nicolás Gómez Dávila",
+    "work": "Les Horreurs de la démocratie",
+    "date": "2003",
+    "language": "english"
+  },
+  {
+    "text": "Le bilinguisme développe la conscience métalinguistique ; la langue devient un objet de réflexion et développe nombre d’autres facultés cognitives.",
+    "author": "Uli Windisch",
+    "work": "La Suisse brûle",
+    "date": "2021",
+    "language": "english"
+  },
+  {
+    "text": "Rien n’est plus beau que d’apprendre par cœur, c’est-à-dire de recevoir pleinement une parcelle de cet immense héritage qui reste toujours à comprendre. L’expression même manifeste, de façon lumineuse, l’unité de l’intelligence et de la sensibilité, augmentées ensemble de ce qui nous est transmis. Apprendre par cœur, c’est laisser un texte, une musique, un savoir nous habiter, nous transformer, élever et élargir notre esprit et notre cœur jusqu’à leur propre hauteur. De cette maturation, notre être même a besoin.",
+    "author": "François-Xavier Bellamy",
+    "work": "Les Déshérités ou l’urgence de transmettre",
+    "date": "2014",
+    "language": "french"
+  },
+  {
+    "text": "– Je les ai vus, Monsieur le Ministre. Le frère, la sœur et trois garçons avec des visages d’ancien temps.",
+    "author": "Jean Raspail",
+    "work": "Sire",
+    "date": "1991",
+    "language": "english"
+  },
+  {
+    "text": "La logique du révolté est de s’efforcer au langage clair pour ne pas épaissir le mensonge universel.",
+    "author": "Albert Camus",
+    "work": "L’Homme révolté",
+    "date": "1951",
+    "language": "french"
+  },
+  {
+    "text": "Il faut avoir le cœur placé haut pour verser certaines larmes : la source des grands fleuves se trouve sur le sommet des monts qui avoisinent le ciel.",
+    "author": "François-René de Chateaubriand",
+    "work": "Pensées, réflexions et maximes",
+    "date": "1836",
+    "language": "english"
+  },
+  {
+    "text": "Le fait que la Monarchie n’apparaisse pas “actuelle” prouve non pas un progrès, mais une régression : cela signifie qu’une certaine partie de l’humanité est tombée tellement bas qu’elle n’est plus à la hauteur d’une telle institution.",
+    "author": "Julius Evola",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "Rétablissez les distances. Appelez une petite fille Mademoiselle. N’imitez pas Facebook, la BNP ou la chaîne Accor, dérobez-vous à la civilisation des prénoms. Ayez une mère, pas une maman. Ne soyez pas papa, soyez père. Ne dites pas c’est quoi ?, dites qu’est-ce que c’est ? Fuyez le langage bébé. Ne faites pas comme l’administration des Impôts, n’écrivez pas Bonjour !, dites Monsieur. Pratiquez la concordance des temps. Ne venez pas comme vous êtes. Soyez plutôt mort que sympa. Posez vos couverts entre chaque bouchée, au lieu de les tenir haut levés comme un hôte de talk-show toujours la main en l’air pour interrompre celui ou celle à qui il vient de donner la parole. Chassez les marques de la table de vos repas, même au petit déjeuner. Chassez-les aussi de vos vêtements. Vouvoyez les inconnus. Quoi que vous entrepreniez, drague, traité théologique, libération du territoire. Mettez‑y les formes. Résistez, résistez, résistez. Les liquidateurs vous veulent liquides, refusez la liquéfaction. On veut vous faire disparaître, imposez-vous le paraître : il est la condition de l’être, pour les individus comme pour les peuples, et plus encore pour les civilisations, qu’il a vu naître.",
+    "author": "Renaud Camus",
+    "work": null,
+    "date": null,
+    "language": "french"
+  },
+  {
+    "text": "Les éoliennes, ce sont vraiment les croix gammées du remplacisme global,  le totem qui proclame : « Vous êtes des rats, et faits comme des rats ». Il n’y avait déjà plus de campagne, il n’y a maintenant plus de ciel. Davos règne.",
+    "author": "Renaud Camus",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "Quand il n'y a plus de culture, on appelle culture ce qu'il y a.",
+    "author": "Renaud Camus",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "Je suis heureux parce que ma vie se passe dans la dignité de la beauté. Ceux-là se trompent complétement qui croient que la beauté est un ornement qu'on ajoute de temps en temps à la suite des jours, pour leur donner du sel ou du charme, ou pour en rompre le cours monotone. La beauté est une structure ontologique, un cadre pour la vie morale, une exigence de tous les instants. Il faut qu'elle soit une chambre, une bibliothèque, le paysage de nos journées, une allée de cèdres sous la lune, à flanc de coteau.",
+    "author": "Renaud Camus",
+    "work": null,
+    "date": null,
+    "language": "english"
+  },
+  {
+    "text": "Un classique est un livre qui n'a jamais fini de dire ce qu'il a à dire.",
+    "author": "Italo Calvino",
+    "work": "Pourquoi lire les classiques",
+    "date": "2018",
+    "language": "french"
+  }
+]

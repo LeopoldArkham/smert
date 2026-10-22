@@ -53,6 +53,14 @@
       — {{ author }}
     </div>
   </div>
+  <script>
+    document.addEventListener('keydown', e => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'q')           location.href = '/admin';
+      if (e.key === 'ArrowRight')  location.href = '/wotd';
+      if (e.key === 'ArrowLeft')   location.href = '/artwork';
+    });
+  </script>
 </body>
 
 </html>

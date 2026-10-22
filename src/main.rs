@@ -126,8 +126,24 @@ struct NewScriptureForm {
     book:        String,
     chapter:     u16,
     verse_start: u16,
+    #[serde(default, deserialize_with = "empty_as_none")]
     verse_end:   Option<u16>,
     text:        String,
+}
+
+/// An optional number input left blank is submitted as an empty string,
+/// which would otherwise fail to parse and reject the whole form.
+fn empty_as_none<'de, D, T>(de: D) -> std::result::Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    let s: Option<String> = serde::Deserialize::deserialize(de)?;
+    match s.as_deref().map(str::trim) {
+        None | Some("") => Ok(None),
+        Some(s)         => s.parse().map(Some).map_err(serde::de::Error::custom),
+    }
 }
 
 #[tokio::main]

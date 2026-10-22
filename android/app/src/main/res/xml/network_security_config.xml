@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The server has no domain or HTTPS yet; allow plain HTTP to it only.
+     Remove once it is served over HTTPS. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">167.233.56.221.sslip.io</domain>
+    </domain-config>
+</network-security-config>

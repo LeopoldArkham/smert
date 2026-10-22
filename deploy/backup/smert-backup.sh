@@ -18,6 +18,11 @@ exec > >(tee -a "$log") 2>&1
 
 ping "$HC_PING_URL/start"
 
+# A run that crashed can leave its lock behind, which would block the
+# cleanup below every night after. This only removes locks whose process
+# is gone.
+restic unlock
+
 # Stage a data folder (smert.db + images/) so a restore gives back exactly
 # what deploy/seed.sh expects.
 stage=/var/cache/smert-backup

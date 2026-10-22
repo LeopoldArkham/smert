@@ -46,8 +46,9 @@ cp -al "$VOLUME_DIR/images" "$stage/images"
 cd "$stage"
 restic backup --host smert --ignore-ctime smert.db images
 
-# Keep only the latest snapshot and drop data nothing references any more.
-restic forget --host smert --keep-last 1 --prune
+# Keep the last snapshot of each of the last 7 days, and drop data nothing
+# references any more.
+restic forget --host smert --keep-daily 7 --prune
 restic check
 
 rm -rf "$stage"

@@ -2,8 +2,9 @@
 
 Every night at 03:30 (Paris time) the server backs up smert's data volume
 (`smert.db` + `images/`) to a Hetzner Storage Box with
-[restic](https://restic.net). Backups are encrypted and only the latest one is
-kept. healthchecks.io emails you if a night's backup fails or doesn't run.
+[restic](https://restic.net). Backups are encrypted, and one per day is kept
+for the last 7 days. healthchecks.io emails you if a night's backup fails or
+doesn't run.
 
 On the server:
 

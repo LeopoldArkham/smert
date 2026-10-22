@@ -6,9 +6,6 @@ from GitHub, runs the container, and routes web traffic to it through its
 Traefik proxy. The database and images live in a Docker volume mounted at
 `/data`, which survives redeploys.
 
-GitHub Actions (`.github/workflows/ci.yml`) runs the tests and builds the
-Docker image on every push, so a broken build shows up there.
-
 ## One-time setup
 
 ### 1. Create the app in Coolify

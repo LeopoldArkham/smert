@@ -162,6 +162,7 @@ async fn main() {
         .route("/qotd",                      get(qotd))
         .route("/artwork",                   get(artwork_handler))
         .route("/wotd",                      get(wotd))
+        .route("/api/wotd",                  get(api_wotd))
         .route("/scripture",                 get(scripture_handler))
         .route("/reroll/{page}",             post(reroll))
         .route("/images/{id}/{name}",        get(image))
@@ -215,6 +216,25 @@ async fn artwork_handler(State(state): State<AppState>) -> HandlerResult<(Status
         Some(a) => (StatusCode::OK, Html(artwork::render_artwork(&a)?)),
         None    => (StatusCode::NOT_FOUND, Html("<p>No artwork yet.</p>".into())),
     })
+}
+
+/// Today's two words as JSON, for the Android live wallpaper.
+/// `next_rollover` says when they change, barring a manual reroll.
+async fn api_wotd(State(state): State<AppState>) -> HandlerResult<Response> {
+    let word = |d: Option<Definition>| {
+        d.map(|d| serde_json::json!({
+            "word":        d.word,
+            "translation": d.translation,
+            "definition":  d.definition,
+        }))
+    };
+    let body = serde_json::json!({
+        "day":           daily::today().to_string(),
+        "next_rollover": daily::next_rollover().to_rfc3339(),
+        "french":        word(daily::todays(&state.pool, Kind::WordFr).await?),
+        "english":       word(daily::todays(&state.pool, Kind::WordEn).await?),
+    });
+    Ok(([(header::CACHE_CONTROL, "no-store")], axum::Json(body)).into_response())
 }
 
 async fn wotd(State(state): State<AppState>) -> HandlerResult<Html<String>> {

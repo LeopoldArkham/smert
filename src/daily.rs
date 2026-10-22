@@ -5,7 +5,7 @@
 
 use crate::error::Result;
 use crate::resources::{self, Resource};
-use chrono::{DateTime, Duration, NaiveDate, Utc};
+use chrono::{DateTime, Duration, NaiveDate, NaiveTime, TimeZone, Utc};
 use chrono_tz::Tz;
 use sqlx::SqlitePool;
 
@@ -54,6 +54,19 @@ pub fn today() -> NaiveDate {
 fn day_at(now: DateTime<Utc>) -> NaiveDate {
     let local = now.with_timezone(&TIMEZONE).naive_local();
     (local - Duration::hours(ROLLOVER_HOUR)).date()
+}
+
+/// When the next day's picks begin: tomorrow (in the rollover sense) at
+/// 05:00 Paris time.
+pub fn next_rollover() -> DateTime<Utc> {
+    next_rollover_after(Utc::now())
+}
+
+fn next_rollover_after(now: DateTime<Utc>) -> DateTime<Utc> {
+    let next_day = day_at(now) + Duration::days(1);
+    let at = next_day.and_time(NaiveTime::from_hms_opt(ROLLOVER_HOUR as u32, 0, 0).unwrap());
+    // 05:00 always exists in Paris (clocks change at 02:00/03:00).
+    TIMEZONE.from_local_datetime(&at).earliest().unwrap().with_timezone(&Utc)
 }
 
 /// Today's pick for `kind`, loaded from its table. Makes the pick first if
@@ -134,6 +147,16 @@ mod tests {
         // Summer (UTC+2): 05:00 Paris is 03:00 UTC.
         assert_eq!(day("2026-07-15T02:59:59Z"), "2026-07-14");
         assert_eq!(day("2026-07-15T03:00:00Z"), "2026-07-15");
+    }
+
+    #[test]
+    fn next_rollover_is_the_coming_five_am_in_paris() {
+        let next = |utc: &str| next_rollover_after(utc.parse().unwrap()).to_rfc3339();
+        // Before and after 05:00 on a winter day (UTC+1).
+        assert_eq!(next("2026-01-15T03:59:59Z"), "2026-01-15T04:00:00+00:00");
+        assert_eq!(next("2026-01-15T04:00:00Z"), "2026-01-16T04:00:00+00:00");
+        // Across the switch to summer time (UTC+2).
+        assert_eq!(next("2026-03-28T12:00:00Z"), "2026-03-29T03:00:00+00:00");
     }
 
     #[test]

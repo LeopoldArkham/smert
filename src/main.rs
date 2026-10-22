@@ -122,6 +122,11 @@ struct NewDefinitionForm {
 }
 
 #[derive(serde::Deserialize)]
+struct ScriptureLinkForm {
+    link: String,
+}
+
+#[derive(serde::Deserialize)]
 struct NewScriptureForm {
     book:        String,
     chapter:     u16,
@@ -175,6 +180,7 @@ async fn main() {
         .route("/admin/definitions",         post(admin_definitions_post))
         .route("/admin/definitions/delete",  post(admin_definitions_delete))
         .route("/admin/scriptures",          post(admin_scriptures_post))
+        .route("/admin/scriptures/link",     post(admin_scriptures_link))
         .route("/admin/scriptures/delete",   post(admin_scriptures_delete))
         .with_state(state);
 
@@ -433,6 +439,18 @@ async fn admin_definitions_post(State(state): State<AppState>, Form(form): Form<
 async fn admin_definitions_delete(State(state): State<AppState>, Form(form): Form<DeleteForm>) -> HandlerResult<Redirect> {
     definition::delete(&state.pool, form.id).await?;
     Ok(Redirect::to("/admin#definitions"))
+}
+
+/// One step: parse the BibleGateway link, fetch the KJV text, store it.
+async fn admin_scriptures_link(State(state): State<AppState>, Form(form): Form<ScriptureLinkForm>) -> Redirect {
+    let result = async {
+        let s = scripture::from_link(&form.link).await?;
+        scripture::add(&state.pool, &s).await
+    }.await;
+    match result {
+        Ok(())  => Redirect::to("/admin#scriptures"),
+        Err(e)  => err_redirect("scriptures", e),
+    }
 }
 
 async fn admin_scriptures_post(State(state): State<AppState>, Form(form): Form<NewScriptureForm>) -> Redirect {

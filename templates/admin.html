@@ -53,6 +53,7 @@
     /* Wikipedia import row */
     .import-row {
       display: flex;
+      flex-direction: row;
       gap: 0.5rem;
       margin-bottom: 1rem;
       padding-bottom: 1rem;
@@ -446,6 +447,12 @@
   </div>
 
   <div id="tab-scriptures" class="tab-panel" hidden>
+    <form method="post" action="/admin/scriptures/link" class="import-row">
+      <input name="link" type="text" required autocomplete="off"
+             placeholder="Paste a BibleGateway link (or type John 3:16) to add it…">
+      <button type="submit">Add</button>
+    </form>
+
     <form method="post" action="/admin/scriptures">
       <label for="scr-book">Book</label>
       <select id="scr-book" name="book" required style="width:100%;padding:0.45rem 0.65rem;font-size:1rem;background:#2c2d3b;color:#fff6ec;border:1px solid #3d3e50;border-radius:4px;font-family:inherit">

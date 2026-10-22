@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up smert's data to the Storage Box
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/smert-backup
+Nice=10
+IOSchedulingClass=idle

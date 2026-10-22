@@ -1,0 +1,11 @@
+[Unit]
+Description=Nightly smert backup
+
+[Timer]
+# Well before the app's 05:00 daily rollover.
+OnCalendar=*-*-* 03:30 Europe/Paris
+# Run at the next boot if the server was off at 03:30.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

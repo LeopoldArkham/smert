@@ -111,19 +111,14 @@ struct NewArtworkForm {
 }
 
 #[derive(serde::Deserialize)]
-struct ResolveQuery {
-    url: String,
+struct LinkForm {
+    link: String,
 }
 
 #[derive(serde::Deserialize)]
 struct NewDefinitionForm {
     word_fr: String,
     word_en: String,
-}
-
-#[derive(serde::Deserialize)]
-struct ScriptureLinkForm {
-    link: String,
 }
 
 #[derive(serde::Deserialize)]
@@ -175,7 +170,7 @@ async fn main() {
         .route("/admin/quotes",              post(admin_quotes_post))
         .route("/admin/quotes/delete",       post(admin_quotes_delete))
         .route("/admin/artworks",            post(admin_artworks_post))
-        .route("/admin/artworks/resolve",    get(admin_artworks_resolve))
+        .route("/admin/artworks/link",       post(admin_artworks_link))
         .route("/admin/artworks/delete",     post(admin_artworks_delete))
         .route("/admin/definitions",         post(admin_definitions_post))
         .route("/admin/definitions/delete",  post(admin_definitions_delete))
@@ -385,12 +380,11 @@ async fn admin_artworks_post(State(state): State<AppState>, Form(form): Form<New
     }
 }
 
-async fn admin_artworks_resolve(
-    Query(q): Query<ResolveQuery>,
-) -> Result<axum::Json<artwork::ResolvedArtwork>, (StatusCode, String)> {
-    match artwork::resolve_from_wiki(q.url.trim()).await {
-        Ok(resolved) => Ok(axum::Json(resolved)),
-        Err(e)       => Err((StatusCode::BAD_REQUEST, e.to_string())),
+/// One step: look up the Wikipedia/Wikidata link, download the image, store it.
+async fn admin_artworks_link(State(state): State<AppState>, Form(form): Form<LinkForm>) -> Redirect {
+    match artwork::add_from_link(&state.pool, &state.images_dir, &form.link).await {
+        Ok(())  => Redirect::to("/admin#artworks"),
+        Err(e)  => err_redirect("artworks", e),
     }
 }
 
@@ -442,7 +436,7 @@ async fn admin_definitions_delete(State(state): State<AppState>, Form(form): For
 }
 
 /// One step: parse the BibleGateway link, fetch the KJV text, store it.
-async fn admin_scriptures_link(State(state): State<AppState>, Form(form): Form<ScriptureLinkForm>) -> Redirect {
+async fn admin_scriptures_link(State(state): State<AppState>, Form(form): Form<LinkForm>) -> Redirect {
     let result = async {
         let s = scripture::from_link(&form.link).await?;
         scripture::add(&state.pool, &s).await

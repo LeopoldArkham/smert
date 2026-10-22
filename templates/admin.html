@@ -399,11 +399,11 @@
   </div>
 
   <div id="tab-artworks" class="tab-panel" hidden>
-    <div class="import-row">
-      <input id="art-import" type="text" autocomplete="off"
-             placeholder="Paste a Wikipedia or Wikidata link to auto-fill…">
-      <button type="button" id="art-import-btn">Import</button>
-    </div>
+    <form method="post" action="/admin/artworks/link" class="import-row">
+      <input name="link" type="text" required autocomplete="off"
+             placeholder="Paste a Wikipedia or Wikidata link to add it…">
+      <button type="submit">Add</button>
+    </form>
 
     <form method="post" action="/admin/artworks">
       <label for="art-url">URL</label>
@@ -802,48 +802,14 @@
       });
     });
 
-    // ── Wikipedia / Wikidata import: pre-fill the manual form ──────────────────
-
-    function flashError(msg) {
-      const t = document.createElement('div');
-      t.className = 'error-toast';
-      t.textContent = msg;
-      document.body.appendChild(t);
-      setTimeout(() => {
-        t.classList.add('hiding');
-        t.addEventListener('animationend', () => t.remove(), { once: true });
-      }, 5000);
-    }
-
-    const importInput = document.getElementById('art-import');
-    const importBtn   = document.getElementById('art-import-btn');
-
-    async function importArtwork() {
-      const url = importInput.value.trim();
-      if (!url) return;
-      const orig = importBtn.textContent;
-      importBtn.disabled = true;
-      importBtn.textContent = 'Importing…';
-      try {
-        const res = await fetch('/admin/artworks/resolve?url=' + encodeURIComponent(url));
-        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-        const data = await res.json();
-        document.getElementById('art-url').value    = data.url    || '';
-        document.getElementById('art-artist').value = data.artist || '';
-        document.getElementById('art-work').value   = data.work   || '';
-        document.getElementById('art-date').value   = data.date   || '';
-        document.getElementById('art-work').focus();
-      } catch (e) {
-        flashError('Import failed: ' + (e.message || e));
-      } finally {
-        importBtn.disabled = false;
-        importBtn.textContent = orig;
-      }
-    }
-
-    importBtn.addEventListener('click', importArtwork);
-    importInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); importArtwork(); }
+    // Link imports can take a few seconds (an artwork's image is downloaded):
+    // show it, and keep a second click from submitting twice.
+    document.querySelectorAll('form.import-row').forEach(form => {
+      form.addEventListener('submit', () => {
+        const btn = form.querySelector('button');
+        btn.disabled = true;
+        btn.textContent = 'Adding…';
+      });
     });
 
     // Definitions: click a word to expand/collapse its full definition inline.

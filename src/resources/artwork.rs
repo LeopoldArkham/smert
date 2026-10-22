@@ -1,7 +1,6 @@
 use crate::error::Result;
 use crate::resources::Resource;
 use askama::Template;
-use serde::Serialize;
 use sqlx::{SqliteConnection, SqlitePool};
 use std::path::{Path, PathBuf};
 
@@ -83,9 +82,9 @@ fn thumb_path(images_dir: &Path, id: i64) -> PathBuf {
     images_dir.join("thumbs").join(format!("{id}.jpg"))
 }
 
-/// Metadata resolved from a Wikipedia / Wikidata URL, ready to pre-fill the
-/// manual "add artwork" form. `url` is the highest-resolution image URL.
-#[derive(Debug, Serialize)]
+/// Metadata resolved from a Wikipedia / Wikidata URL. `url` is the
+/// highest-resolution image URL.
+#[derive(Debug)]
 pub struct ResolvedArtwork {
     pub url:    String,
     pub artist: String,
@@ -191,6 +190,33 @@ pub async fn download_and_add(pool: &SqlitePool, images_dir: &Path, new: &NewArt
     add(&mut tx, images_dir, new, ext, &bytes).await?;
     tx.commit().await?;
     Ok(())
+}
+
+/// Add an artwork from a Wikipedia or Wikidata link in one step: look it up,
+/// download its image and store it.
+pub async fn add_from_link(pool: &SqlitePool, images_dir: &Path, link: &str) -> Result<()> {
+    let link = link.trim();
+    if link.is_empty() {
+        return Err("paste a Wikipedia or Wikidata link".into());
+    }
+    let r = resolve_from_wiki(link).await?;
+    // There's no form to fix things up afterwards, so refuse rather than store
+    // an untitled or anonymous entry.
+    if r.work.trim().is_empty() || r.artist.trim().is_empty() {
+        return Err(format!(
+            "Wikidata has no {} for this work; add it with the form below instead",
+            if r.work.trim().is_empty() { "title" } else { "creator" },
+        ).into());
+    }
+    let exists: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM artworks WHERE url = ?)")
+        .bind(&r.url)
+        .fetch_one(pool)
+        .await?;
+    if exists {
+        return Err(format!("\u{201c}{}\u{201d} is already in the catalogue", r.work).into());
+    }
+    let new = NewArtwork { url: &r.url, artist: &r.artist, work: &r.work, date: &r.date };
+    download_and_add(pool, images_dir, &new).await
 }
 
 /// Resolve artwork metadata + a highest-resolution image URL from a Wikipedia

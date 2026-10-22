@@ -49,7 +49,7 @@
 </head>
 
 <body>
-  <img src="/static/artwork/{{ filename }}" alt="{{ work }}">
+  <img src="{{ self.image_url() }}" alt="{{ work }}">
   <div class="caption">{{ work }}</div>
   <div class="meta">{{ artist }}, {{ date }}</div>
 
@@ -59,6 +59,9 @@
       if (e.key === 'q')           location.href = '/admin';
       if (e.key === 'ArrowRight')  location.href = '/qotd';
       if (e.key === 'ArrowLeft')   location.href = '/wotd';
+      if (e.key === 'ArrowUp')     location.href = '/scripture';
+      if (e.key === 'r' && !e.repeat)
+        fetch('/reroll/artwork', { method: 'POST' }).then(() => location.reload());
     });
   </script>
 </body>

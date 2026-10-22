@@ -23,8 +23,6 @@ pub enum Kind {
 }
 
 impl Kind {
-    pub const ALL: [Kind; 5] = [Kind::Quote, Kind::Artwork, Kind::WordEn, Kind::WordFr, Kind::Scripture];
-
     fn as_str(self) -> &'static str {
         match self {
             Kind::Quote     => "quote",

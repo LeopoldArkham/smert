@@ -12,20 +12,26 @@ use resources::definition::{self, Definition};
 use resources::quote::{self, Quote};
 use resources::scripture::{self, Scripture};
 
+use std::path::Path;
+use std::sync::Arc;
+
 use askama::Template;
 use axum::{
     Form, Router,
-    extract::{Query, State},
-    http::StatusCode,
+    body::Body,
+    extract::{self, Query, Request, State},
+    http::{HeaderValue, StatusCode, header},
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
 };
 use sqlx::SqlitePool;
-use tower_http::services::ServeDir;
+use tower::ServiceExt;
+use tower_http::services::ServeFile;
 
 #[derive(Clone)]
 struct AppState {
-    pool: SqlitePool,
+    pool:       SqlitePool,
+    images_dir: Arc<Path>,
 }
 
 /// Any failure inside a handler: logged, and reported to the browser as a 500.
@@ -78,12 +84,8 @@ struct WotdTemplate {
 }
 
 #[derive(Template)]
-#[template(path = "home.html")]
-struct HomeTemplate {
-    quote:     Quote,
-    artwork:   Option<Artwork>,
-    word_en:   Option<Definition>,
-    word_fr:   Option<Definition>,
+#[template(path = "scripture.html")]
+struct ScriptureTemplate {
     scripture: Option<Scripture>,
 }
 
@@ -142,7 +144,7 @@ async fn main() {
         None => {}
         Some("import") => {
             let dir = args.get(1).map(String::as_str).unwrap_or(".");
-            if let Err(e) = import::run(&pool, std::path::Path::new(dir)).await {
+            if let Err(e) = import::run(&pool, &config.images_dir(), Path::new(dir)).await {
                 eprintln!("import failed: {e}");
                 std::process::exit(1);
             }
@@ -154,37 +156,18 @@ async fn main() {
         }
     }
 
-    let state = AppState { pool };
-
-    // Press "r" + Enter in the console to re-roll every daily pick on demand.
-    let stdin_pool = state.pool.clone();
-    let runtime = tokio::runtime::Handle::current();
-    std::thread::spawn(move || {
-        let stdin = std::io::stdin();
-        let mut line = String::new();
-        loop {
-            line.clear();
-            match stdin.read_line(&mut line) {
-                Ok(0) => break, // EOF — stdin closed
-                Ok(_) => {
-                    if line.trim().eq_ignore_ascii_case("r") {
-                        match runtime.block_on(reroll_all(&stdin_pool)) {
-                            Ok(())  => println!("↻ Rerolled today's picks."),
-                            Err(e)  => eprintln!("reroll failed: {e}"),
-                        }
-                    }
-                }
-                Err(_) => break,
-            }
-        }
-    });
-    println!("Server listening on http://{}  (press \"r\" + Enter to reshuffle)", config.bind);
+    let state = AppState { pool, images_dir: config.images_dir().into() };
+    println!("Server listening on http://{}", config.bind);
 
     let app = Router::new()
-        .route("/",                          get(home))
+        .route("/",                          get(qotd))
         .route("/qotd",                      get(qotd))
         .route("/artwork",                   get(artwork_handler))
         .route("/wotd",                      get(wotd))
+        .route("/scripture",                 get(scripture_handler))
+        .route("/reroll/{page}",             post(reroll))
+        .route("/images/{id}/{name}",        get(image))
+        .route("/thumbs/{id}",               get(thumb))
         .route("/admin",                     get(admin_get))
         .route("/admin/quotes",              post(admin_quotes_post))
         .route("/admin/quotes/delete",       post(admin_quotes_delete))
@@ -195,7 +178,6 @@ async fn main() {
         .route("/admin/definitions/delete",  post(admin_definitions_delete))
         .route("/admin/scriptures",          post(admin_scriptures_post))
         .route("/admin/scriptures/delete",   post(admin_scriptures_delete))
-        .nest_service("/static",             ServeDir::new("static"))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(&config.bind).await.unwrap_or_else(|e| {
@@ -203,13 +185,6 @@ async fn main() {
         std::process::exit(1);
     });
     let _ = axum::serve(listener, app).await;
-}
-
-async fn reroll_all(pool: &SqlitePool) -> error::Result<()> {
-    for kind in Kind::ALL {
-        daily::reroll(pool, kind).await?;
-    }
-    Ok(())
 }
 
 // ── Display handlers ──────────────────────────────────────────────────────────
@@ -234,16 +209,80 @@ async fn wotd(State(state): State<AppState>) -> HandlerResult<Html<String>> {
     Ok(Html(WotdTemplate { word_en, word_fr }.render()?))
 }
 
-async fn home(State(state): State<AppState>) -> HandlerResult<(StatusCode, Html<String>)> {
-    let Some(quote) = daily::todays(&state.pool, Kind::Quote).await? else {
-        return Ok((StatusCode::NOT_FOUND, Html("<p>No quote yet.</p>".into())));
-    };
-    let artwork   = daily::todays(&state.pool, Kind::Artwork).await?;
-    let word_en   = daily::todays(&state.pool, Kind::WordEn).await?;
-    let word_fr   = daily::todays(&state.pool, Kind::WordFr).await?;
+async fn scripture_handler(State(state): State<AppState>) -> HandlerResult<Html<String>> {
     let scripture = daily::todays(&state.pool, Kind::Scripture).await?;
-    let tmpl = HomeTemplate { quote, artwork, word_en, word_fr, scripture };
-    Ok((StatusCode::OK, Html(tmpl.render()?)))
+    Ok(Html(ScriptureTemplate { scripture }.render()?))
+}
+
+/// Replace today's pick(s) shown on a display page; its "r" key calls this.
+async fn reroll(
+    State(state): State<AppState>,
+    extract::Path(page): extract::Path<String>,
+) -> HandlerResult<StatusCode> {
+    let kinds: &[Kind] = match page.as_str() {
+        "quote"     => &[Kind::Quote],
+        "artwork"   => &[Kind::Artwork],
+        "words"     => &[Kind::WordEn, Kind::WordFr],
+        "scripture" => &[Kind::Scripture],
+        _           => return Ok(StatusCode::NOT_FOUND),
+    };
+    for &kind in kinds {
+        daily::reroll(&state.pool, kind).await?;
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// ── Images ────────────────────────────────────────────────────────────────────
+
+/// Full-size artwork image. `name` is only there so browsers save the file
+/// under the artwork's name; Content-Disposition says the same for those
+/// that look at it.
+async fn image(
+    State(state): State<AppState>,
+    extract::Path((id, _name)): extract::Path<(i64, String)>,
+    req: Request,
+) -> HandlerResult<Response> {
+    let Some(a) = resources::get::<Artwork>(&state.pool, id).await? else {
+        return Ok(StatusCode::NOT_FOUND.into_response());
+    };
+    let mut res = serve_file(&a.image_path(&state.images_dir), req).await;
+    if res.status().is_success() {
+        let name = a.download_name();
+        let ascii: String = name.chars().map(|c| if c.is_ascii() { c } else { '_' }).collect();
+        let disposition = format!(
+            "inline; filename=\"{ascii}\"; filename*=UTF-8''{}",
+            urlencoding::encode(&name),
+        );
+        if let Ok(value) = HeaderValue::from_str(&disposition) {
+            res.headers_mut().insert(header::CONTENT_DISPOSITION, value);
+        }
+    }
+    Ok(res)
+}
+
+async fn thumb(
+    State(state): State<AppState>,
+    extract::Path(id): extract::Path<i64>,
+    req: Request,
+) -> HandlerResult<Response> {
+    let Some(a) = resources::get::<Artwork>(&state.pool, id).await? else {
+        return Ok(StatusCode::NOT_FOUND.into_response());
+    };
+    Ok(serve_file(&a.thumb_path(&state.images_dir), req).await)
+}
+
+/// Serve `path` (with range and conditional request support). Successful
+/// responses are cached forever: an artwork id never gets a different image.
+async fn serve_file(path: &Path, req: Request) -> Response {
+    let Ok(res) = ServeFile::new(path).oneshot(req).await;
+    let mut res = res.map(Body::new);
+    if res.status().is_success() {
+        res.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("public, max-age=31536000, immutable"),
+        );
+    }
+    res
 }
 
 // ── Admin handlers ────────────────────────────────────────────────────────────
@@ -315,13 +354,13 @@ async fn admin_quotes_delete(State(state): State<AppState>, Form(form): Form<Del
 }
 
 async fn admin_artworks_post(State(state): State<AppState>, Form(form): Form<NewArtworkForm>) -> Redirect {
-    match artwork::download_and_add(
-        &state.pool,
-        form.url.trim(),
-        form.artist.trim(),
-        form.work.trim(),
-        form.date.trim(),
-    ).await {
+    let new = artwork::NewArtwork {
+        url:    form.url.trim(),
+        artist: form.artist.trim(),
+        work:   form.work.trim(),
+        date:   form.date.trim(),
+    };
+    match artwork::download_and_add(&state.pool, &state.images_dir, &new).await {
         Ok(())  => Redirect::to("/admin#artworks"),
         Err(e)  => err_redirect("artworks", e),
     }
@@ -337,7 +376,7 @@ async fn admin_artworks_resolve(
 }
 
 async fn admin_artworks_delete(State(state): State<AppState>, Form(form): Form<DeleteForm>) -> HandlerResult<Redirect> {
-    artwork::delete(&state.pool, form.id).await?;
+    artwork::delete(&state.pool, &state.images_dir, form.id).await?;
     Ok(Redirect::to("/admin#artworks"))
 }
 

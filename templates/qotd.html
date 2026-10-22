@@ -59,6 +59,9 @@
       if (e.key === 'q')           location.href = '/admin';
       if (e.key === 'ArrowRight')  location.href = '/wotd';
       if (e.key === 'ArrowLeft')   location.href = '/artwork';
+      if (e.key === 'ArrowUp')     location.href = '/scripture';
+      if (e.key === 'r' && !e.repeat)
+        fetch('/reroll/quote', { method: 'POST' }).then(() => location.reload());
     });
   </script>
 </body>

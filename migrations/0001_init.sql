@@ -8,11 +8,14 @@ CREATE TABLE quotes (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Image files live at <data dir>/images/<id>.<ext>, thumbnails at
+-- <data dir>/images/thumbs/<id>.jpg. AUTOINCREMENT so an id is never reused:
+-- image URLs are cached forever and must always point to the same image.
 CREATE TABLE artworks (
-    id         INTEGER PRIMARY KEY,
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
     url        TEXT NOT NULL,
-    filename   TEXT NOT NULL,
-    thumbnail  TEXT,
+    ext        TEXT NOT NULL,
+    has_thumb  INTEGER NOT NULL DEFAULT 0,
     artist     TEXT NOT NULL,
     work       TEXT NOT NULL,
     date       TEXT NOT NULL,

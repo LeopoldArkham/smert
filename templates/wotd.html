@@ -139,6 +139,9 @@
       if (e.key === 'q')           location.href = '/admin';
       if (e.key === 'ArrowRight')  location.href = '/artwork';
       if (e.key === 'ArrowLeft')   location.href = '/qotd';
+      if (e.key === 'ArrowUp')     location.href = '/scripture';
+      if (e.key === 'r' && !e.repeat)
+        fetch('/reroll/words', { method: 'POST' }).then(() => location.reload());
     });
   </script>
 </body>

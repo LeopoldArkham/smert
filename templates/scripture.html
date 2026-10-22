@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&display=swap" rel="stylesheet">
+  <title>Scripture of the Day</title>
+  <style>
+    html,
+    body {
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      background-color: #21222d;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6vh 8vw;
+      box-sizing: border-box;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .scripture-text {
+      font-family: "Baskervville", serif;
+      font-size: clamp(1.3rem, 2.6vw, 2rem);
+      color: #fff6ec;
+      line-height: 1.65;
+      max-width: 720px;
+      white-space: pre-line;
+    }
+
+    .scripture-ref {
+      font-family: "Baskervville", serif;
+      font-style: italic;
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      color: #c4bdb5;
+      margin-top: 1.25rem;
+      text-decoration: none;
+      border-bottom: 1px dotted #4a4a5a;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .scripture-ref:hover {
+      color: #fff6ec;
+      border-color: #c4bdb5;
+    }
+
+    .empty {
+      color: #7a7870;
+      font-style: italic;
+    }
+  </style>
+</head>
+
+<body>
+  {% if let Some(s) = scripture %}
+  <div class="scripture-text">"{{ s.text }}"</div>
+  <a class="scripture-ref" href="{{ s.bible_gateway_url() }}" target="_blank" rel="noopener noreferrer">{{ s.reference() }}</a>
+  {% else %}
+  <div class="scripture-text empty">No scripture yet.</div>
+  {% endif %}
+  <script>
+    document.addEventListener('keydown', e => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'q')           location.href = '/admin';
+      // Up from any page opens scripture; Down returns to where you came from.
+      if (e.key === 'ArrowDown') {
+        if (document.referrer.startsWith(location.origin + '/')) history.back();
+        else location.href = '/';
+      }
+      if (e.key === 'r' && !e.repeat)
+        fetch('/reroll/scripture', { method: 'POST' }).then(() => location.reload());
+    });
+  </script>
+</body>
+
+</html>

@@ -1,11 +1,10 @@
 use crate::error::Result;
 use crate::resources::Resource;
 use askama::Template;
-use serde::{Deserialize, Serialize};
-use sqlx::{SqliteExecutor, SqlitePool};
+use serde::Serialize;
+use sqlx::{SqliteConnection, SqlitePool};
+use std::path::{Path, PathBuf};
 
-const IMAGE_DIR: &str = "./static/artwork";
-const THUMB_DIR: &str = "./static/artwork/thumbs";
 /// Max width (px) requested when importing a Commons image — keeps downloads
 /// sane while staying high-resolution. Originals can be hundreds of MB.
 const MAX_IMAGE_WIDTH: u32 = 3840;
@@ -13,16 +12,13 @@ const MAX_IMAGE_WIDTH: u32 = 3840;
 /// whole server. 64 MB comfortably covers a 4K-wide JPEG.
 const MAX_DOWNLOAD_BYTES: u64 = 64 * 1024 * 1024;
 
-#[derive(Debug, Clone, Deserialize, Serialize, Template, sqlx::FromRow)]
+#[derive(Debug, Clone, Template, sqlx::FromRow)]
 #[template(path = "artwork.html")]
 pub struct Artwork {
-    /// Absent in the legacy JSON files; assigned by the database.
-    #[serde(default)]
     pub id:        i64,
-    pub url:       String,
-    pub filename:  String,
-    #[serde(default)]
-    pub thumbnail: Option<String>,
+    /// Extension of the stored image file, e.g. "jpg".
+    pub ext:       String,
+    pub has_thumb: bool,
     pub artist:    String,
     pub work:      String,
     pub date:      String,
@@ -30,7 +26,61 @@ pub struct Artwork {
 
 impl Resource for Artwork {
     const SELECT: &'static str =
-        "SELECT id, url, filename, thumbnail, artist, work, date FROM artworks";
+        "SELECT id, ext, has_thumb, artist, work, date FROM artworks";
+}
+
+impl Artwork {
+    /// Ends in the download name, so "Save image as" suggests it in every browser.
+    pub fn image_url(&self) -> String {
+        format!("/images/{}/{}", self.id, urlencoding::encode(&self.download_name()))
+    }
+
+    pub fn thumb_url(&self) -> String {
+        if self.has_thumb { format!("/thumbs/{}", self.id) } else { self.image_url() }
+    }
+
+    /// "Artist - Work (Date).ext", leaving out whatever is empty, with
+    /// characters that are invalid in filenames replaced.
+    pub fn download_name(&self) -> String {
+        let mut name = [self.artist.trim(), self.work.trim()]
+            .into_iter()
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join(" - ");
+        if !self.date.trim().is_empty() {
+            name = format!("{name} ({})", self.date.trim());
+        }
+        let name: String = name
+            .chars()
+            .map(|c| if c.is_control() || r#"/\:*?"<>|"#.contains(c) { '_' } else { c })
+            .collect();
+        let stem = if name.trim().is_empty() { format!("artwork-{}", self.id) } else { name };
+        format!("{stem}.{}", self.ext)
+    }
+
+    pub fn image_path(&self, images_dir: &Path) -> PathBuf {
+        image_path(images_dir, self.id, &self.ext)
+    }
+
+    pub fn thumb_path(&self, images_dir: &Path) -> PathBuf {
+        thumb_path(images_dir, self.id)
+    }
+}
+
+/// An artwork that isn't stored yet.
+pub struct NewArtwork<'a> {
+    pub url:    &'a str,
+    pub artist: &'a str,
+    pub work:   &'a str,
+    pub date:   &'a str,
+}
+
+fn image_path(images_dir: &Path, id: i64, ext: &str) -> PathBuf {
+    images_dir.join(format!("{id}.{ext}"))
+}
+
+fn thumb_path(images_dir: &Path, id: i64) -> PathBuf {
+    images_dir.join("thumbs").join(format!("{id}.jpg"))
 }
 
 /// Metadata resolved from a Wikipedia / Wikidata URL, ready to pre-fill the
@@ -49,25 +99,46 @@ pub async fn all(pool: &SqlitePool) -> Result<Vec<Artwork>> {
     Ok(sqlx::query_as(&sql).fetch_all(pool).await?)
 }
 
-pub async fn add<'e>(db: impl SqliteExecutor<'e>, a: &Artwork) -> Result<()> {
-    sqlx::query(
-        "INSERT INTO artworks (url, filename, thumbnail, artist, work, date) VALUES (?, ?, ?, ?, ?, ?)",
+/// Insert the artwork and write its image file. `thumbnail` is an existing
+/// thumbnail to reuse; without one, it is generated from `image`. Runs on
+/// `conn` so a caller's transaction also undoes the insert if a write fails.
+pub async fn add(
+    conn:       &mut SqliteConnection,
+    images_dir: &Path,
+    new:        &NewArtwork<'_>,
+    ext:        &str,
+    image:      &[u8],
+    thumbnail:  Option<&[u8]>,
+) -> Result<i64> {
+    let id: i64 = sqlx::query_scalar(
+        "INSERT INTO artworks (url, ext, artist, work, date) VALUES (?, ?, ?, ?, ?) RETURNING id",
     )
-    .bind(&a.url)
-    .bind(&a.filename)
-    .bind(&a.thumbnail)
-    .bind(&a.artist)
-    .bind(&a.work)
-    .bind(&a.date)
-    .execute(db)
+    .bind(new.url)
+    .bind(ext)
+    .bind(new.artist)
+    .bind(new.work)
+    .bind(new.date)
+    .fetch_one(&mut *conn)
     .await?;
-    Ok(())
+
+    std::fs::create_dir_all(images_dir.join("thumbs"))?;
+    std::fs::write(image_path(images_dir, id, ext), image)?;
+
+    let thumb = thumb_path(images_dir, id);
+    let has_thumb = match thumbnail {
+        Some(bytes) => std::fs::write(&thumb, bytes).is_ok(),
+        None        => make_thumbnail(image, &thumb).is_ok(),
+    };
+    sqlx::query("UPDATE artworks SET has_thumb = ? WHERE id = ?")
+        .bind(has_thumb)
+        .bind(id)
+        .execute(&mut *conn)
+        .await?;
+    Ok(id)
 }
 
-pub async fn download_and_add(pool: &SqlitePool, url: &str, artist: &str, work: &str, date: &str) -> Result<()> {
-    std::fs::create_dir_all(IMAGE_DIR)?;
-    std::fs::create_dir_all(THUMB_DIR)?;
-
+pub async fn download_and_add(pool: &SqlitePool, images_dir: &Path, new: &NewArtwork<'_>) -> Result<()> {
+    let url = new.url;
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
         .build()?;
@@ -121,23 +192,10 @@ pub async fn download_and_add(pool: &SqlitePool, url: &str, artist: &str, work: 
         bytes.extend_from_slice(&chunk);
     }
 
-    let filename = url_to_filename_with_ext(url, ext);
-    let dest = format!("{}/{}", IMAGE_DIR, filename);
-    std::fs::write(&dest, &bytes)?;
-
-    let thumbnail = make_thumbnail(&dest, &filename).ok();
-
-    let artwork = Artwork {
-        id: 0,
-        url: url.to_string(),
-        filename,
-        thumbnail,
-        artist: artist.to_string(),
-        work: work.to_string(),
-        date: date.to_string(),
-    };
-
-    add(pool, &artwork).await
+    let mut tx = pool.begin().await?;
+    add(&mut tx, images_dir, new, ext, &bytes, None).await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 /// Resolve artwork metadata + a highest-resolution image URL from a Wikipedia
@@ -282,15 +340,13 @@ fn claim_year(entity: &serde_json::Value, prop: &str) -> String {
     }
 }
 
-pub async fn delete(pool: &SqlitePool, id: i64) -> Result<()> {
+pub async fn delete(pool: &SqlitePool, images_dir: &Path, id: i64) -> Result<()> {
     let Some(a) = super::get::<Artwork>(pool, id).await? else {
         return Ok(());
     };
     sqlx::query("DELETE FROM artworks WHERE id = ?").bind(id).execute(pool).await?;
-    let _ = std::fs::remove_file(format!("{}/{}", IMAGE_DIR, a.filename));
-    if let Some(ref thumb) = a.thumbnail {
-        let _ = std::fs::remove_file(format!("{}/{}", THUMB_DIR, thumb));
-    }
+    let _ = std::fs::remove_file(a.image_path(images_dir));
+    let _ = std::fs::remove_file(a.thumb_path(images_dir));
     Ok(())
 }
 
@@ -307,16 +363,11 @@ pub fn render_artwork(artwork: &Artwork) -> Result<String> {
     Ok(artwork.render()?)
 }
 
-/// Resize the image at `src_path` to fit within 160×120 and save it as JPEG
-/// under THUMB_DIR. Returns the thumbnail filename (not full path).
-fn make_thumbnail(src_path: &str, src_filename: &str) -> Result<String> {
-    let img = image::open(src_path)?;
-    let thumb = img.thumbnail(160, 120);
-    let stem = src_filename.rsplit_once('.').map(|(s, _)| s).unwrap_or(src_filename);
-    let thumb_name = format!("{}_thumb.jpg", stem);
-    let dest = format!("{}/{}", THUMB_DIR, thumb_name);
-    thumb.save_with_format(&dest, image::ImageFormat::Jpeg)?;
-    Ok(thumb_name)
+/// Resize `image` to fit within 160×120 and save it to `dest` as JPEG.
+fn make_thumbnail(image: &[u8], dest: &Path) -> Result<()> {
+    let thumb = image::load_from_memory(image)?.thumbnail(160, 120);
+    thumb.into_rgb8().save_with_format(dest, image::ImageFormat::Jpeg)?;
+    Ok(())
 }
 
 fn ext_from_url(url: &str) -> &'static str {
@@ -331,13 +382,4 @@ fn ext_from_url(url: &str) -> &'static str {
         Some("avif")               => "avif",
         _                          => "jpg",
     }
-}
-
-fn url_to_filename_with_ext(url: &str, ext: &str) -> String {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-
-    let mut hasher = DefaultHasher::new();
-    url.hash(&mut hasher);
-    format!("{:016x}.{}", hasher.finish(), ext)
 }

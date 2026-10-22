@@ -429,12 +429,8 @@
     <ul class="artwork-list">
     {% for a in artworks %}
     <li data-artist="{{ a.artist }}">
-      <a href="/static/artwork/{{ a.filename }}" target="_blank" tabindex="-1">
-        {% if let Some(thumb) = a.thumbnail %}
-        <img src="/static/artwork/thumbs/{{ thumb }}" class="artwork-thumb" alt="">
-        {% else %}
-        <img src="/static/artwork/{{ a.filename }}" class="artwork-thumb" alt="">
-        {% endif %}
+      <a href="{{ a.image_url() }}" target="_blank" tabindex="-1">
+        <img src="{{ a.thumb_url() }}" class="artwork-thumb" alt="">
       </a>
       <div class="artwork-info">
         <span class="artwork-title">{{ a.work }}</span>

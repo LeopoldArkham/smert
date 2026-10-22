@@ -5,7 +5,7 @@ use std::path::PathBuf;
 pub struct Config {
     /// `SMERT_BIND`: address the HTTP server listens on.
     pub bind:     String,
-    /// `SMERT_DATA_DIR`: folder holding the SQLite database.
+    /// `SMERT_DATA_DIR`: folder holding the SQLite database and images.
     pub data_dir: PathBuf,
 }
 
@@ -21,5 +21,9 @@ impl Config {
 
     pub fn database_path(&self) -> PathBuf {
         self.data_dir.join("smert.db")
+    }
+
+    pub fn images_dir(&self) -> PathBuf {
+        self.data_dir.join("images")
     }
 }

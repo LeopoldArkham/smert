@@ -152,6 +152,16 @@ async fn main() {
         std::process::exit(1);
     });
 
+    // Scriptures saved as one line get their verse breaks back, in the background.
+    tokio::spawn({
+        let pool = pool.clone();
+        async move {
+            if let Err(e) = scripture::restore_verse_breaks(&pool).await {
+                eprintln!("restoring verse breaks: {e}");
+            }
+        }
+    });
+
     let state = AppState { pool, images_dir: config.images_dir().into() };
     println!("Server listening on http://{}", config.bind);
 

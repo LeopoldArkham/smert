@@ -20,12 +20,63 @@ impl Scripture {
         }
     }
 
+    /// The text one verse per line, each split into runs so the divine
+    /// names the KJV prints in capitals can be set in small caps.
+    pub fn verses(&self) -> Vec<Vec<Run>> {
+        self.text.lines().map(str::trim).filter(|l| !l.is_empty()).map(runs).collect()
+    }
+
     pub fn bible_gateway_url(&self) -> String {
         format!(
             "https://www.biblegateway.com/passage/?search={}&version=KJV",
             urlencoding::encode(&self.reference())
         )
     }
+}
+
+/// A stretch of verse text; `small_caps` marks a divine name, already
+/// lowercased after its first letter ("LORD" becomes "Lord").
+#[derive(Debug, PartialEq)]
+pub struct Run {
+    pub text:       String,
+    pub small_caps: bool,
+}
+
+/// Names the KJV sets in capitals for the Tetragrammaton.
+const DIVINE_NAMES: [&str; 3] = ["LORD", "GOD", "JEHOVAH"];
+
+/// Split a verse around its divine names, keeping a following possessive
+/// ("LORD’S") with the name.
+fn runs(verse: &str) -> Vec<Run> {
+    let mut out = Vec::new();
+    let mut plain = String::new();
+    let mut rest = verse;
+    while !rest.is_empty() {
+        let word_len = rest.find(|c: char| !c.is_alphabetic()).unwrap_or(rest.len());
+        let (word, after) = rest.split_at(word_len.max(rest.chars().next().map_or(0, char::len_utf8)));
+        if DIVINE_NAMES.contains(&word) {
+            let possessive = ["\u{2019}S", "'S"].into_iter()
+                .find(|p| after.strip_prefix(p).is_some_and(|a| !a.starts_with(char::is_alphabetic)));
+            let (name, after) = match possessive {
+                Some(p) => rest.split_at(word.len() + p.len()),
+                None    => (word, after),
+            };
+            if !plain.is_empty() {
+                out.push(Run { text: std::mem::take(&mut plain), small_caps: false });
+            }
+            let mut text = name[..1].to_string();
+            text.push_str(&name[1..].to_lowercase());
+            out.push(Run { text, small_caps: true });
+            rest = after;
+        } else {
+            plain.push_str(word);
+            rest = after;
+        }
+    }
+    if !plain.is_empty() {
+        out.push(Run { text: plain, small_caps: false });
+    }
+    out
 }
 
 impl Resource for Scripture {
@@ -64,7 +115,11 @@ pub async fn delete(pool: &SqlitePool, id: i64) -> Result<()> {
 /// "John 3:16-17"). The link only says which passage; the text is always
 /// fetched in the KJV from bible-api.com, whatever version the link uses.
 pub async fn from_link(input: &str) -> Result<Scripture> {
-    let reference = reference_from_link(input)?;
+    fetch(&reference_from_link(input)?).await
+}
+
+/// Fetch a passage, e.g. "John 3:16-17", in the KJV from bible-api.com.
+async fn fetch(reference: &str) -> Result<Scripture> {
 
     #[derive(serde::Deserialize)]
     struct Passage { verses: Vec<Verse> }
@@ -73,7 +128,7 @@ pub async fn from_link(input: &str) -> Result<Scripture> {
 
     let url = format!(
         "https://bible-api.com/{}?translation=kjv",
-        urlencoding::encode(&reference),
+        urlencoding::encode(reference),
     );
     let client = reqwest::Client::builder()
         .user_agent("smert/1.0")
@@ -97,12 +152,13 @@ pub async fn from_link(input: &str) -> Result<Scripture> {
     }
     let last = verses.last().unwrap_or(first);
 
-    // Verse texts come padded and with line breaks from the poetry layout.
+    // One verse per line. Verse texts come padded, and with line breaks
+    // that fall mid-phrase, so those are dropped.
     let text = verses
         .iter()
-        .flat_map(|v| v.text.split_whitespace())
+        .map(|v| v.text.split_whitespace().collect::<Vec<_>>().join(" "))
         .collect::<Vec<_>>()
-        .join(" ");
+        .join("\n");
 
     Ok(Scripture {
         id:          0,
@@ -112,6 +168,34 @@ pub async fn from_link(input: &str) -> Result<Scripture> {
         verse_end:   (last.verse != first.verse).then_some(last.verse),
         text,
     })
+}
+
+/// Scriptures added before verse breaks were kept have a whole passage on
+/// one line. Re-fetch those and add the breaks, but only where the words are
+/// unchanged, so a text typed in by hand is never replaced.
+pub async fn restore_verse_breaks(pool: &SqlitePool) -> Result<()> {
+    let sql = format!(
+        "{} WHERE verse_end IS NOT NULL AND instr(text, char(10)) = 0",
+        Scripture::SELECT,
+    );
+    let flat: Vec<Scripture> = sqlx::query_as(&sql).fetch_all(pool).await?;
+    let words = |t: &str| t.split_whitespace().collect::<Vec<_>>().join(" ");
+    for s in flat {
+        let reference = format!("{} {}:{}-{}", s.book, s.chapter, s.verse_start, s.verse_end.unwrap_or(s.verse_start));
+        match fetch(&reference).await {
+            Ok(fetched) if words(&fetched.text) == words(&s.text) => {
+                sqlx::query("UPDATE scriptures SET text = ? WHERE id = ?")
+                    .bind(&fetched.text)
+                    .bind(s.id)
+                    .execute(pool)
+                    .await?;
+                println!("restored verse breaks in {reference}");
+            }
+            Ok(_)  => println!("not restoring verse breaks in {reference}: its text differs from the KJV"),
+            Err(e) => println!("not restoring verse breaks in {reference}: {e}"),
+        }
+    }
+    Ok(())
 }
 
 /// The passage reference in a BibleGateway link: the `search` parameter of
@@ -150,7 +234,21 @@ fn reference_from_link(input: &str) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::reference_from_link;
+    use super::{Run, reference_from_link, runs};
+
+    #[test]
+    fn sets_divine_names_in_small_caps() {
+        let run = |text: &str, small_caps| Run { text: text.into(), small_caps };
+        assert_eq!(runs("The LORD is my shepherd; I shall not want."), [
+            run("The ", false), run("Lord", true), run(" is my shepherd; I shall not want.", false),
+        ]);
+        assert_eq!(runs("the Lord GOD of the LORD\u{2019}S house"), [
+            run("the Lord ", false), run("God", true), run(" of the ", false), run("Lord\u{2019}s", true), run(" house", false),
+        ]);
+        assert_eq!(runs("LORDS and GODLY men, O LORD"), [
+            run("LORDS and GODLY men, O ", false), run("Lord", true),
+        ]);
+    }
 
     #[test]
     fn reads_the_passage_from_biblegateway_links() {

@@ -223,8 +223,12 @@
       color: #fff6ec;
       line-height: 1.65;
       max-width: 720px;
-      white-space: pre-line;
     }
+
+    .verse { display: block; }
+    .verse + .verse { margin-top: 0.35em; }
+
+    .divine-name { font-variant: small-caps; }
 
     .scripture-ref {
       font-family: "Baskervville", serif;
@@ -326,7 +330,11 @@
         <rect x="0" y="40" width="120" height="28" rx="5"/>
       </g>
     </svg>
-    <div class="scripture-text">"{{ s.text }}"</div>
+    <div class="scripture-text">
+      {%- for verse in s.verses() %}
+      <span class="verse">{% if loop.first %}"{% endif %}{% for run in verse %}{% if run.small_caps %}<span class="divine-name">{{ run.text }}</span>{% else %}{{ run.text }}{% endif %}{% endfor %}{% if loop.last %}"{% endif %}</span>
+      {%- endfor %}
+    </div>
     <a class="scripture-ref" href="{{ s.bible_gateway_url() }}" target="_blank" rel="noopener noreferrer">{{ s.reference() }}</a>
     {% else %}
     <div class="scripture-text empty">No scripture yet.</div>

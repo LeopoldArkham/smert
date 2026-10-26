@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The favicon's gilding, across the whole fleur-de-lis (64-unit glyph space). -->
+<gradient xmlns:android="http://schemas.android.com/apk/res/android"
+    android:type="linear"
+    android:startX="4" android:startY="2.5"
+    android:endX="60" android:endY="58">
+    <item android:offset="0"    android:color="#f6e2a0" />
+    <item android:offset="0.35" android:color="#d9b55e" />
+    <item android:offset="0.65" android:color="#b48a35" />
+    <item android:offset="1"    android:color="#7d5a23" />
+</gradient>

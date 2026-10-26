@@ -22,7 +22,7 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.concurrent.Executors
 
-private const val API_URL = "http://dx63m4krbosa1k4t6nitmay6.167.233.56.221.sslip.io/api/wotd"
+private const val API_URL = "$SERVER_URL/api/wotd"
 
 /** Refetch at most this often when the screen turns on, to pick up rerolls. */
 private const val MIN_REFRESH_MS = 15 * 60 * 1000L

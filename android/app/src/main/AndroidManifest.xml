@@ -31,5 +31,22 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- The /admin page, as a second app ("smert admin") so it can be a
+             lock-screen shortcut. Its own task, so it shows apart in Recents. -->
+        <activity
+            android:name=".AdminActivity"
+            android:label="@string/admin_name"
+            android:icon="@mipmap/ic_admin"
+            android:theme="@style/Admin"
+            android:taskAffinity="com.leopoldarkham.smert.admin"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>

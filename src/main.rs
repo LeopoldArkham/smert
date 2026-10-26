@@ -376,14 +376,14 @@ async fn admin_quotes_post(State(state): State<AppState>, Form(form): Form<NewQu
         date,
         language: form.language,
     }).await {
-        Ok(())  => Redirect::to("/admin"),
+        Ok(())  => Redirect::to("/admin#quotes"),
         Err(e)  => err_redirect("quotes", e),
     }
 }
 
 async fn admin_quotes_delete(State(state): State<AppState>, Form(form): Form<DeleteForm>) -> HandlerResult<Redirect> {
     quote::delete(&state.pool, form.id).await?;
-    Ok(Redirect::to("/admin"))
+    Ok(Redirect::to("/admin#quotes"))
 }
 
 async fn admin_artworks_post(State(state): State<AppState>, Form(form): Form<NewArtworkForm>) -> Redirect {

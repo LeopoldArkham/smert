@@ -38,8 +38,17 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 Opening "smert words" on the phone opens the live wallpaper preview; choose
 **Lock screen** when setting it.
 
+## smert admin
+
+The same app adds a second icon, **smert admin** (the fleur-de-lis), which
+opens the server's `/admin` page full screen. To launch it from the lock
+screen: Settings → Lock screen → Shortcuts, and pick it for the left or right
+shortcut. The phone asks to be unlocked before it opens.
+
+Links to other sites (Bible Gateway) open in the browser.
+
 ## When the server gets a domain
 
-`API_URL` points at the sslip.io address over plain HTTP, which
-`res/xml/network_security_config.xml` allows for that host only. With a domain
-and HTTPS, update `API_URL` and delete that exception.
+`SERVER_URL` (in `Server.kt`) points at the sslip.io address over plain HTTP,
+which `res/xml/network_security_config.xml` allows for that host only. With a
+domain and HTTPS, update `SERVER_URL` and delete that exception.

@@ -206,7 +206,7 @@
 
     #scripture {
       flex-direction: column;
-      padding: 6vh 8vw;
+      padding: 6vh 4vw;
       text-align: center;
     }
 
@@ -222,11 +222,14 @@
       font-size: clamp(1.3rem, 2.6vw, 2rem);
       color: #fff6ec;
       line-height: 1.65;
-      max-width: 720px;
+      width: 100%;
     }
 
-    .verse { display: block; }
+    /* One line per verse; fitVerses() shrinks the text until each fits,
+       or lets them wrap at full size when shrinking can't make them fit. */
+    .verse { display: block; white-space: nowrap; }
     .verse + .verse { margin-top: 0.35em; }
+    .scripture-text.wrap .verse { white-space: normal; text-wrap: balance; }
 
     .divine-name { font-variant: small-caps; }
 
@@ -362,6 +365,28 @@
 
     document.querySelectorAll('.page img').forEach(img => preload(img.src));
 
+    // Shrink the scripture until every verse fits on one line, but no further
+    // than 60% of its usual size (and never below 16px). If that isn't
+    // enough, keep the usual size and let the verses wrap.
+    function fitVerses() {
+      const box = document.querySelector('#scripture .scripture-text');
+      if (!box) return;
+      box.style.fontSize = '';
+      box.classList.remove('wrap');
+      const verses = [...box.querySelectorAll('.verse')];
+      const ratio = Math.min(1, ...verses.map(v => v.clientWidth / v.scrollWidth));
+      if (ratio === 1) return;
+      const size = parseFloat(getComputedStyle(box).fontSize);
+      const floor = Math.max(16, size * 0.6);
+      const fitted = Math.floor(size * ratio * 0.98);
+      if (fitted >= floor) box.style.fontSize = fitted + 'px';
+      else box.classList.add('wrap');
+    }
+
+    fitVerses();
+    document.fonts.ready.then(fitVerses);
+    addEventListener('resize', fitVerses);
+
     function show(id) {
       if (id === current) return;
       if (id === 'scripture') beforeScripture = current;
@@ -393,6 +418,7 @@
         await Promise.all([sleep(FADE), img && preload(img.getAttribute('src'))]);
         page.innerHTML = fresh.innerHTML;
         page.dataset.title = fresh.dataset.title;
+        if (id === 'scripture') fitVerses();
         if (current === id) document.title = page.dataset.title;
       } finally {
         page.classList.remove('rerolling');

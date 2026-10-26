@@ -89,18 +89,18 @@
       padding: 4vh 5vw;
     }
 
-    /* A thin gilded frame, lit from the top left: its outer slope is light
+    /* A thin bronze frame, lit from the top left: its outer slope is light
        on the top and left edges, its inner slope (next to the painting)
        light on the bottom and right. */
     .frame {
       --frame: clamp(4px, 0.75vh, 10px);
       padding: var(--frame);
       border: 2px solid;
-      border-color: #f7e7ad #7a5818 #5c4110 #e8cb78;
-      background: linear-gradient(135deg, #8f6a24 0%, #e9cd7c 22%, #b48a35 45%, #f2da8f 68%, #94702a 100%);
+      border-color: #d9b98a #5e3f1e #47301a #c4a271;
+      background: linear-gradient(135deg, #6e4a22 0%, #b88d5a 22%, #8a6236 45%, #c29a66 68%, #6a4520 100%);
       box-shadow:
-        inset 2px 2px 2px rgba(255, 244, 205, 0.55),
-        inset -2px -2px 3px rgba(70, 45, 8, 0.6);
+        inset 2px 2px 2px rgba(240, 215, 170, 0.45),
+        inset -2px -2px 3px rgba(40, 22, 6, 0.65);
     }
 
     #artwork img {
@@ -108,8 +108,8 @@
       max-width: calc(90vw - 2 * var(--frame) - 4px);
       max-height: calc(88vh - 2 * var(--frame) - 4px);
       box-shadow:
-        -1px -1px 0 1px rgba(70, 45, 8, 0.75),
-        1px 1px 0 1px rgba(255, 240, 195, 0.6);
+        -1px -1px 0 1px rgba(40, 22, 6, 0.8),
+        1px 1px 0 1px rgba(235, 205, 160, 0.45);
     }
 
     .caption {

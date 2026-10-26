@@ -12,6 +12,7 @@ from a list curated that I will curate, and serve it to me over various channels
 
 Currently, smert can store quotes and display one on an aesthetic web page, which I have assigned to my New Tab page in chrome via the [Custom New Tab URL
 ](https://chromewebstore.google.com/detail/custom-new-tab-url/mmjbdbjnoablegbkcklggeknkfcjkjia) extension.
+The daily quote is also my Mac's desktop wallpaper (see [`macos/`](macos/README.md)).
 More channels are expected to follow.
 
 ## How?

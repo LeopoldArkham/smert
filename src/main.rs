@@ -11,8 +11,10 @@ use resources::definition::{self, Definition};
 use resources::quote::{self, Quote};
 use resources::scripture::{self, Scripture};
 
+use std::convert::Infallible;
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 
 use askama::Template;
 use axum::{
@@ -21,9 +23,12 @@ use axum::{
     extract::{self, Query, Request, State},
     http::{HeaderValue, StatusCode, header},
     response::{Html, IntoResponse, Redirect, Response},
+    response::sse::{Event, KeepAlive, Sse},
     routing::{get, post},
 };
 use sqlx::SqlitePool;
+use tokio::sync::broadcast;
+use tokio_stream::{Stream, StreamExt, wrappers::BroadcastStream};
 use tower::ServiceExt;
 use tower_http::services::ServeFile;
 
@@ -31,6 +36,8 @@ use tower_http::services::ServeFile;
 struct AppState {
     pool:       SqlitePool,
     images_dir: Arc<Path>,
+    /// Kinds whose daily pick may have changed, for `/api/events`.
+    changes:    broadcast::Sender<Kind>,
 }
 
 /// Any failure inside a handler: logged, and reported to the browser as a 500.
@@ -162,12 +169,15 @@ async fn main() {
         }
     });
 
-    let state = AppState { pool, images_dir: config.images_dir().into() };
+    let (changes, _) = broadcast::channel(16);
+    let state = AppState { pool, images_dir: config.images_dir().into(), changes };
     println!("Server listening on http://{}", config.bind);
 
     let app = Router::new()
         .route("/",                          get(display))
         .route("/api/wotd",                  get(api_wotd))
+        .route("/api/quote",                 get(api_quote))
+        .route("/api/events",                get(api_events))
         .route("/reroll/{page}",             post(reroll))
         .route("/favicon.svg",               get(favicon))
         .route("/images/{id}/{name}",        get(image))
@@ -239,6 +249,36 @@ async fn api_wotd(State(state): State<AppState>) -> HandlerResult<Response> {
     Ok(([(header::CACHE_CONTROL, "no-store")], axum::Json(body)).into_response())
 }
 
+/// Today's quote as JSON, for the macOS wallpaper agent.
+/// `next_rollover` says when it changes, barring a manual reroll.
+async fn api_quote(State(state): State<AppState>) -> HandlerResult<Response> {
+    let quote = daily::todays::<Quote>(&state.pool, Kind::Quote).await?;
+    let body = serde_json::json!({
+        "day":           daily::today().to_string(),
+        "next_rollover": daily::next_rollover().to_rfc3339(),
+        "quote":         quote.map(|q| serde_json::json!({
+            "text":   q.text,
+            "author": q.author,
+            "work":   q.work,
+        })),
+    });
+    Ok(([(header::CACHE_CONTROL, "no-store")], axum::Json(body)).into_response())
+}
+
+/// A server-sent event, whose data is a kind (`quote`, `word_en`, …), each
+/// time that kind's pick for today may have changed outside the daily
+/// rollover: a reroll, or a quote added or deleted. Clients refetch it.
+/// The rollover itself sends nothing: the first request after it makes the
+/// new pick, so clients refetch at `next_rollover` from the JSON endpoints.
+async fn api_events(State(state): State<AppState>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    // A lagging receiver has missed changes from long ago; skipping them is fine.
+    let events = BroadcastStream::new(state.changes.subscribe())
+        .filter_map(|kind| kind.ok())
+        .map(|kind| Ok(Event::default().data(kind.as_str())));
+    // Comments every 20 s keep proxies and the client from dropping an idle stream.
+    Sse::new(events).keep_alive(KeepAlive::new().interval(Duration::from_secs(20)))
+}
+
 /// Replace today's pick(s) shown on a display page; its "r" key calls this.
 async fn reroll(
     State(state): State<AppState>,
@@ -253,6 +293,8 @@ async fn reroll(
     };
     for &kind in kinds {
         daily::reroll(&state.pool, kind).await?;
+        // No subscribers is not an error.
+        let _ = state.changes.send(kind);
     }
     Ok(StatusCode::NO_CONTENT)
 }
@@ -376,13 +418,19 @@ async fn admin_quotes_post(State(state): State<AppState>, Form(form): Form<NewQu
         date,
         language: form.language,
     }).await {
-        Ok(())  => Redirect::to("/admin#quotes"),
+        Ok(())  => {
+            // The first quote added becomes today's.
+            let _ = state.changes.send(Kind::Quote);
+            Redirect::to("/admin#quotes")
+        }
         Err(e)  => err_redirect("quotes", e),
     }
 }
 
 async fn admin_quotes_delete(State(state): State<AppState>, Form(form): Form<DeleteForm>) -> HandlerResult<Redirect> {
     quote::delete(&state.pool, form.id).await?;
+    // Deleting today's quote makes the next request pick another.
+    let _ = state.changes.send(Kind::Quote);
     Ok(Redirect::to("/admin#quotes"))
 }
 

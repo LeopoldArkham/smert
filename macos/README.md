@@ -1,0 +1,50 @@
+# smert quote: macOS desktop wallpaper
+
+A background agent that draws smert's daily quote, from `/api/quote`, as the
+desktop wallpaper of every screen, in the display page's colours and font.
+
+- Keeps `/api/events` open and refetches the moment the quote is rerolled,
+  added or deleted (well under a second). The 05:00 rollover sends no event,
+  so it also refetches just after it, and hourly as a safety net.
+- If the event stream drops (redeploy, sleep, network change) it reconnects
+  after 1 s, doubling up to a minute, and at once on wake; each reconnect
+  refetches, to catch what was missed. The server sends a keep-alive every
+  20 s, so 60 s of silence counts as a dead stream.
+- The last response is kept for when the Mac is offline.
+- macOS only sets the wallpaper of the current Space, so the agent sets it
+  again whenever you switch to a Space that doesn't show it yet.
+- Long quotes shrink to fit between the menu bar and the Dock.
+- Font: Baskervville (SIL Open Font License, see `../android/licenses/`),
+  copied from the Android app; macOS's Baskerville if it is missing.
+
+## Installing
+
+Needs the Xcode command line tools (`swiftc`):
+
+```bash
+macos/install.sh
+```
+
+This builds `SmertWallpaper.swift` into
+`~/Library/Application Support/smert-wallpaper/` and registers it with launchd
+(`~/Library/LaunchAgents/com.leopoldarkham.smert.wallpaper.plist`), so it runs
+at login and restarts if it exits. Run it again after changing the source.
+
+To remove it (the last wallpaper stays until you pick another):
+
+```bash
+macos/install.sh uninstall
+```
+
+## Testing against a local server
+
+```bash
+SMERT_URL=http://127.0.0.1:1212 "$HOME/Library/Application Support/smert-wallpaper/SmertWallpaper" --once
+```
+
+`--once` fetches, sets the wallpaper and exits; leave it off to also listen
+for rerolls. To watch the events themselves:
+
+```bash
+curl -N http://127.0.0.1:1212/api/events
+```

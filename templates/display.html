@@ -89,10 +89,28 @@
       padding: 4vh 5vw;
     }
 
+    /* A thin gilded frame, lit from the top left: its outer slope is light
+       on the top and left edges, its inner slope (next to the painting)
+       light on the bottom and right. */
+    .frame {
+      --frame: clamp(6px, 1.1vh, 14px);
+      padding: var(--frame);
+      border: 2px solid;
+      border-color: #f7e7ad #7a5818 #5c4110 #e8cb78;
+      background: linear-gradient(135deg, #8f6a24 0%, #e9cd7c 22%, #b48a35 45%, #f2da8f 68%, #94702a 100%);
+      box-shadow:
+        inset 2px 2px 2px rgba(255, 244, 205, 0.55),
+        inset -2px -2px 3px rgba(70, 45, 8, 0.6),
+        0 1.2vh 3vh rgba(0, 0, 0, 0.55);
+    }
+
     #artwork img {
-      max-width: 100%;
-      max-height: 88vh;
-      object-fit: contain;
+      display: block;
+      max-width: calc(90vw - 2 * var(--frame) - 4px);
+      max-height: calc(88vh - 2 * var(--frame) - 4px);
+      box-shadow:
+        -1px -1px 0 1px rgba(70, 45, 8, 0.75),
+        1px 1px 0 1px rgba(255, 240, 195, 0.6);
     }
 
     .caption {
@@ -237,7 +255,7 @@
 
   {% if let Some(a) = artwork %}
   <section id="artwork" class="page" data-title="{{ a.work }}">
-    <img src="{{ a.image_url() }}" alt="{{ a.work }}">
+    <div class="frame"><img src="{{ a.image_url() }}" alt="{{ a.work }}"></div>
     <div class="caption">{{ a.work }}</div>
     <div class="meta">{{ a.artist }}, {{ a.date }}</div>
   </section>

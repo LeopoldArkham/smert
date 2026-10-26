@@ -210,6 +210,13 @@
       text-align: center;
     }
 
+    /* Sized with the verse text; the stamp texture scales along with it. */
+    .scripture-cross {
+      height: clamp(2.8rem, 5.6vw, 3.75rem);
+      width: auto;
+      margin-bottom: 1.5rem;
+    }
+
     .scripture-text {
       font-family: "Baskervville", serif;
       font-size: clamp(1.3rem, 2.6vw, 2rem);
@@ -305,6 +312,20 @@
 
   <section id="scripture" class="page" data-title="Scripture of the Day">
     {% if let Some(s) = scripture %}
+    <!-- A Latin cross, roughened and speckled like a rubber stamp. -->
+    <svg class="scripture-cross" viewBox="-10 -10 140 200" aria-hidden="true">
+      <filter id="stamp" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="7" result="warp"/>
+        <feDisplacementMap in="SourceGraphic" in2="warp" scale="5" xChannelSelector="R" yChannelSelector="G" result="rough"/>
+        <feTurbulence type="fractalNoise" baseFrequency="0.1" numOctaves="3" seed="7" result="noise"/>
+        <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -10 0 0 0 7.6" result="ink"/>
+        <feComposite in="rough" in2="ink" operator="in"/>
+      </filter>
+      <g fill="#fff6ec" filter="url(#stamp)">
+        <rect x="46" y="0" width="28" height="180" rx="5"/>
+        <rect x="0" y="40" width="120" height="28" rx="5"/>
+      </g>
+    </svg>
     <div class="scripture-text">"{{ s.text }}"</div>
     <a class="scripture-ref" href="{{ s.bible_gateway_url() }}" target="_blank" rel="noopener noreferrer">{{ s.reference() }}</a>
     {% else %}

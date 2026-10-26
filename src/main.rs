@@ -159,6 +159,7 @@ async fn main() {
         .route("/",                          get(display))
         .route("/api/wotd",                  get(api_wotd))
         .route("/reroll/{page}",             post(reroll))
+        .route("/favicon.svg",               get(favicon))
         .route("/images/{id}/{name}",        get(image))
         .route("/thumbs/{id}",               get(thumb))
         .route("/admin",                     get(admin_get))
@@ -247,6 +248,14 @@ async fn reroll(
 }
 
 // ── Images ────────────────────────────────────────────────────────────────────
+
+/// A gilded fleur-de-lis, compiled into the binary.
+async fn favicon() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "image/svg+xml"), (header::CACHE_CONTROL, "public, max-age=86400")],
+        include_str!("../static/favicon.svg"),
+    )
+}
 
 /// Full-size artwork image. `name` is only there so browsers save the file
 /// under the artwork's name; Content-Disposition says the same for those

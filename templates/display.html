@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&display=swap" rel="stylesheet">
+  {% if let Some(a) = artwork %}
+  <link rel="preload" as="image" href="{{ a.image_url() }}" fetchpriority="high">
+  {% endif %}
+  <title>Quote of the Day</title>
+  <style>
+    :root { --fade: 100ms; }
+
+    @media (prefers-reduced-motion: reduce) {
+      :root { --fade: 0ms; }
+    }
+
+    html, body {
+      height: 100vh;
+      width: 100vw;
+      margin: 0;
+      background-color: #21222d;
+      overflow: hidden;
+    }
+
+    /* All four pages are stacked; only the active one is visible. The old
+       one fades out, then the new one fades in. */
+    .page {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity var(--fade) ease, visibility 0s var(--fade);
+    }
+
+    .page.active {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity var(--fade) ease var(--fade), visibility 0s var(--fade);
+    }
+
+    .page.active.rerolling {
+      opacity: 0;
+      transition: opacity var(--fade) ease;
+    }
+
+    .empty {
+      font-family: "Baskervville", serif;
+      font-style: italic;
+      color: #7a7870;
+    }
+
+    /* ── Quote ── */
+
+    #quote {
+      padding: 5vh 5vw;
+      text-align: center;
+    }
+
+    .baskervville {
+      font-family: "Baskervville", serif;
+      font-optical-sizing: auto;
+      font-weight: 400;
+      font-style: normal;
+      color: #fff6ec;
+    }
+
+    .quote {
+      font-size: 2rem;
+    }
+
+    .author {
+      font-size: 1.5rem;
+      margin-top: 20px;
+      font-style: italic;
+    }
+
+    /* ── Artwork ── */
+
+    #artwork {
+      flex-direction: column;
+      padding: 4vh 5vw;
+    }
+
+    #artwork img {
+      max-width: 100%;
+      max-height: 88vh;
+      object-fit: contain;
+    }
+
+    .caption {
+      font-family: "Baskervville", serif;
+      color: #fff6ec;
+      font-size: 1.3rem;
+      font-style: italic;
+      margin-top: 1.25rem;
+      text-align: center;
+    }
+
+    .meta {
+      font-family: "Baskervville", serif;
+      color: #7a7870;
+      font-size: 1rem;
+      margin-top: 0.4rem;
+      text-align: center;
+    }
+
+    /* ── Words ── */
+
+    #words {
+      padding: 5vh 8vw;
+    }
+
+    .words {
+      display: flex;
+      align-items: flex-start;
+      gap: 4vw;
+      width: 100%;
+      max-width: 1280px;
+    }
+
+    .word-block { flex: 1; min-width: 0; }
+
+    .divider {
+      width: 1px;
+      min-height: 120px;
+      align-self: stretch;
+      background: #32333f;
+      flex-shrink: 0;
+    }
+
+    .word-lang {
+      font-family: system-ui, sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #7a7870;
+      margin-bottom: 0.6rem;
+    }
+
+    .word-text {
+      font-family: "Baskervville", serif;
+      font-style: italic;
+      font-size: clamp(2rem, 4vw, 3rem);
+      color: #fff6ec;
+      line-height: 1.15;
+    }
+
+    .word-pos {
+      font-family: system-ui, sans-serif;
+      font-size: 0.8rem;
+      color: #7a7870;
+      margin-top: 0.35rem;
+    }
+
+    .word-def {
+      font-family: "Baskervville", serif;
+      font-size: 1.1rem;
+      color: #c4bdb5;
+      margin-top: 0.75rem;
+      line-height: 1.65;
+      white-space: pre-line;
+    }
+
+    .dict-link {
+      display: inline-block;
+      margin-top: 1rem;
+      font-family: system-ui, sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #3d3e50;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .dict-link:hover { color: #7a7870; }
+
+    /* ── Scripture ── */
+
+    #scripture {
+      flex-direction: column;
+      padding: 6vh 8vw;
+      text-align: center;
+    }
+
+    .scripture-text {
+      font-family: "Baskervville", serif;
+      font-size: clamp(1.3rem, 2.6vw, 2rem);
+      color: #fff6ec;
+      line-height: 1.65;
+      max-width: 720px;
+      white-space: pre-line;
+    }
+
+    .scripture-ref {
+      font-family: "Baskervville", serif;
+      font-style: italic;
+      font-size: clamp(1rem, 2vw, 1.5rem);
+      color: #c4bdb5;
+      margin-top: 1.25rem;
+      text-decoration: none;
+      border-bottom: 1px dotted #4a4a5a;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .scripture-ref:hover {
+      color: #fff6ec;
+      border-color: #c4bdb5;
+    }
+  </style>
+</head>
+
+<body>
+  <section id="quote" class="page active" data-title="Quote of the Day">
+    {% if let Some(q) = quote %}
+    <div>
+      <div class="baskervville quote">
+        {{ q.text }}
+      </div>
+      <div class="baskervville author">
+        — {{ q.author }}
+      </div>
+    </div>
+    {% else %}
+    <div class="empty">No quote yet.</div>
+    {% endif %}
+  </section>
+
+  {% if let Some(a) = artwork %}
+  <section id="artwork" class="page" data-title="{{ a.work }}">
+    <img src="{{ a.image_url() }}" alt="{{ a.work }}">
+    <div class="caption">{{ a.work }}</div>
+    <div class="meta">{{ a.artist }}, {{ a.date }}</div>
+  </section>
+  {% else %}
+  <section id="artwork" class="page" data-title="Artwork of the Day">
+    <div class="empty">No artwork yet.</div>
+  </section>
+  {% endif %}
+
+  <section id="words" class="page" data-title="Word of the Day">
+    <div class="words">
+      <div class="word-block">
+        <div class="word-lang">Français</div>
+        {% if let Some(w) = word_fr %}
+          <div class="word-text">{{ w.word }}</div>
+          {% if !w.translation.is_empty() %}
+          <div class="word-pos">{{ w.translation }}</div>
+          {% endif %}
+          {% if !w.definition.is_empty() %}
+          <div class="word-def">{{ w.definition }}</div>
+          {% endif %}
+          <a class="dict-link" href="https://fr.wiktionary.org/wiki/{{ w.word|urlencode }}" target="_blank" rel="noopener noreferrer">Wiktionnaire ↗</a>
+        {% else %}
+          <div class="empty">Aucun mot pour l'instant.</div>
+        {% endif %}
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="word-block">
+        <div class="word-lang">English</div>
+        {% if let Some(w) = word_en %}
+          <div class="word-text">{{ w.word }}</div>
+          {% if !w.translation.is_empty() %}
+          <div class="word-pos">{{ w.translation }}</div>
+          {% endif %}
+          {% if !w.definition.is_empty() %}
+          <div class="word-def">{{ w.definition }}</div>
+          {% endif %}
+          <a class="dict-link" href="https://www.merriam-webster.com/dictionary/{{ w.word|urlencode }}" target="_blank" rel="noopener noreferrer">Merriam-Webster ↗</a>
+        {% else %}
+          <div class="empty">No word yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section id="scripture" class="page" data-title="Scripture of the Day">
+    {% if let Some(s) = scripture %}
+    <div class="scripture-text">"{{ s.text }}"</div>
+    <a class="scripture-ref" href="{{ s.bible_gateway_url() }}" target="_blank" rel="noopener noreferrer">{{ s.reference() }}</a>
+    {% else %}
+    <div class="scripture-text empty">No scripture yet.</div>
+    {% endif %}
+  </section>
+
+  <script>
+    // Must match --fade.
+    const FADE = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 100;
+    // Right moves forward through these, Left back; Up opens scripture from any of them.
+    const CYCLE = ['quote', 'words', 'artwork'];
+
+    let current = 'quote';
+    let beforeScripture = current;
+    let rerolling = false;
+
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Fetch and decode an image so it paints at once when its page is shown.
+    function preload(src) {
+      const img = new Image();
+      img.src = src;
+      return img.decode().catch(() => {});
+    }
+
+    document.querySelectorAll('.page img').forEach(img => preload(img.src));
+
+    function show(id) {
+      if (id === current) return;
+      if (id === 'scripture') beforeScripture = current;
+      document.getElementById(current).classList.remove('active');
+      const page = document.getElementById(id);
+      page.classList.add('active');
+      current = id;
+      document.title = page.dataset.title;
+    }
+
+    function step(by) {
+      const i = CYCLE.indexOf(current);
+      if (i >= 0) show(CYCLE[(i + by + CYCLE.length) % CYCLE.length]);
+    }
+
+    // Replace today's pick for the current page, then fade in the new one
+    // in place, once its image (if any) is ready.
+    async function reroll() {
+      if (rerolling) return;
+      rerolling = true;
+      const id = current;
+      const page = document.getElementById(id);
+      try {
+        await fetch('/reroll/' + id, { method: 'POST' });
+        const html = await (await fetch('/')).text();
+        const fresh = new DOMParser().parseFromString(html, 'text/html').getElementById(id);
+        const img = fresh.querySelector('img');
+        page.classList.add('rerolling');
+        await Promise.all([sleep(FADE), img && preload(img.getAttribute('src'))]);
+        page.innerHTML = fresh.innerHTML;
+        page.dataset.title = fresh.dataset.title;
+        if (current === id) document.title = page.dataset.title;
+      } finally {
+        page.classList.remove('rerolling');
+        rerolling = false;
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'q')           location.href = '/admin';
+      if (e.key === 'ArrowRight')  step(1);
+      if (e.key === 'ArrowLeft')   step(-1);
+      if (e.key === 'ArrowUp')     show('scripture');
+      if (e.key === 'ArrowDown' && current === 'scripture') show(beforeScripture);
+      if (e.key === 'r' && !e.repeat) reroll();
+    });
+  </script>
+</body>
+
+</html>

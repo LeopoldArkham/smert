@@ -1,12 +1,10 @@
 use crate::error::Result;
 use crate::resources::Resource;
-use askama::Template;
 use serde::Serialize;
 use sqlx::{SqliteExecutor, SqlitePool};
 use std::collections::HashSet;
 
-#[derive(Debug, Clone, Serialize, Template, sqlx::FromRow)]
-#[template(path = "qotd.html")]
+#[derive(Debug, Clone, Serialize, sqlx::FromRow)]
 pub struct Quote {
     pub id: i64,
     pub text: String,
@@ -59,9 +57,4 @@ pub fn unique_works(quotes: &[Quote]) -> Vec<String> {
         .filter_map(|q| q.work.clone())
         .filter(|w| !w.is_empty() && seen.insert(w.clone()))
         .collect()
-}
-
-pub fn render_quote(quote: &Quote) -> Result<String> {
-    let rendered = quote.render()?;
-    Ok(rendered)
 }

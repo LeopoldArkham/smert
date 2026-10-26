@@ -1,6 +1,5 @@
 use crate::error::Result;
 use crate::resources::Resource;
-use askama::Template;
 use sqlx::{SqliteConnection, SqlitePool};
 use std::path::{Path, PathBuf};
 
@@ -11,8 +10,7 @@ const MAX_IMAGE_WIDTH: u32 = 3840;
 /// whole server. 64 MB comfortably covers a 4K-wide JPEG.
 const MAX_DOWNLOAD_BYTES: u64 = 64 * 1024 * 1024;
 
-#[derive(Debug, Clone, Template, sqlx::FromRow)]
-#[template(path = "artwork.html")]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Artwork {
     pub id:        i64,
     /// Extension of the stored image file, e.g. "jpg".
@@ -378,10 +376,6 @@ pub fn unique_artists(artworks: &[Artwork]) -> Vec<String> {
         .filter(|a| seen.insert(a.artist.as_str()))
         .map(|a| a.artist.clone())
         .collect()
-}
-
-pub fn render_artwork(artwork: &Artwork) -> Result<String> {
-    Ok(artwork.render()?)
 }
 
 /// Resize `image` to fit within 160×120 and save it to `dest` as JPEG.

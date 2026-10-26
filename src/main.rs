@@ -75,16 +75,14 @@ struct AdminQuery {
     error: Option<String>,
 }
 
+/// All four display pages in one document; the quote is shown first.
 #[derive(Template)]
-#[template(path = "wotd.html")]
-struct WotdTemplate {
-    word_en: Option<Definition>,
-    word_fr: Option<Definition>,
-}
-
-#[derive(Template)]
-#[template(path = "scripture.html")]
-struct ScriptureTemplate {
+#[template(path = "display.html")]
+struct DisplayTemplate {
+    quote:     Option<Quote>,
+    artwork:   Option<Artwork>,
+    word_en:   Option<Definition>,
+    word_fr:   Option<Definition>,
     scripture: Option<Scripture>,
 }
 
@@ -158,12 +156,8 @@ async fn main() {
     println!("Server listening on http://{}", config.bind);
 
     let app = Router::new()
-        .route("/",                          get(qotd))
-        .route("/qotd",                      get(qotd))
-        .route("/artwork",                   get(artwork_handler))
-        .route("/wotd",                      get(wotd))
+        .route("/",                          get(display))
         .route("/api/wotd",                  get(api_wotd))
-        .route("/scripture",                 get(scripture_handler))
         .route("/reroll/{page}",             post(reroll))
         .route("/images/{id}/{name}",        get(image))
         .route("/thumbs/{id}",               get(thumb))
@@ -204,18 +198,15 @@ async fn shutdown_signal() {
 
 // ── Display handlers ──────────────────────────────────────────────────────────
 
-async fn qotd(State(state): State<AppState>) -> HandlerResult<(StatusCode, Html<String>)> {
-    Ok(match daily::todays::<Quote>(&state.pool, Kind::Quote).await? {
-        Some(q) => (StatusCode::OK, Html(quote::render_quote(&q)?)),
-        None    => (StatusCode::NOT_FOUND, Html("<p>No quote yet.</p>".into())),
-    })
-}
-
-async fn artwork_handler(State(state): State<AppState>) -> HandlerResult<(StatusCode, Html<String>)> {
-    Ok(match daily::todays::<Artwork>(&state.pool, Kind::Artwork).await? {
-        Some(a) => (StatusCode::OK, Html(artwork::render_artwork(&a)?)),
-        None    => (StatusCode::NOT_FOUND, Html("<p>No artwork yet.</p>".into())),
-    })
+/// The display page; the arrow keys switch between its four parts in place.
+async fn display(State(state): State<AppState>) -> HandlerResult<Html<String>> {
+    Ok(Html(DisplayTemplate {
+        quote:     daily::todays(&state.pool, Kind::Quote).await?,
+        artwork:   daily::todays(&state.pool, Kind::Artwork).await?,
+        word_en:   daily::todays(&state.pool, Kind::WordEn).await?,
+        word_fr:   daily::todays(&state.pool, Kind::WordFr).await?,
+        scripture: daily::todays(&state.pool, Kind::Scripture).await?,
+    }.render()?))
 }
 
 /// Today's two words as JSON, for the Android live wallpaper.
@@ -235,17 +226,6 @@ async fn api_wotd(State(state): State<AppState>) -> HandlerResult<Response> {
         "english":       word(daily::todays(&state.pool, Kind::WordEn).await?),
     });
     Ok(([(header::CACHE_CONTROL, "no-store")], axum::Json(body)).into_response())
-}
-
-async fn wotd(State(state): State<AppState>) -> HandlerResult<Html<String>> {
-    let word_en = daily::todays(&state.pool, Kind::WordEn).await?;
-    let word_fr = daily::todays(&state.pool, Kind::WordFr).await?;
-    Ok(Html(WotdTemplate { word_en, word_fr }.render()?))
-}
-
-async fn scripture_handler(State(state): State<AppState>) -> HandlerResult<Html<String>> {
-    let scripture = daily::todays(&state.pool, Kind::Scripture).await?;
-    Ok(Html(ScriptureTemplate { scripture }.render()?))
 }
 
 /// Replace today's pick(s) shown on a display page; its "r" key calls this.

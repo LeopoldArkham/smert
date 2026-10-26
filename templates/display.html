@@ -93,15 +93,14 @@
        on the top and left edges, its inner slope (next to the painting)
        light on the bottom and right. */
     .frame {
-      --frame: clamp(6px, 1.1vh, 14px);
+      --frame: clamp(4px, 0.75vh, 10px);
       padding: var(--frame);
       border: 2px solid;
       border-color: #f7e7ad #7a5818 #5c4110 #e8cb78;
       background: linear-gradient(135deg, #8f6a24 0%, #e9cd7c 22%, #b48a35 45%, #f2da8f 68%, #94702a 100%);
       box-shadow:
         inset 2px 2px 2px rgba(255, 244, 205, 0.55),
-        inset -2px -2px 3px rgba(70, 45, 8, 0.6),
-        0 1.2vh 3vh rgba(0, 0, 0, 0.55);
+        inset -2px -2px 3px rgba(70, 45, 8, 0.6);
     }
 
     #artwork img {

@@ -177,6 +177,7 @@ async fn main() {
         .route("/",                          get(display))
         .route("/api/wotd",                  get(api_wotd))
         .route("/api/quote",                 get(api_quote))
+        .route("/api/artwork",               get(api_artwork))
         .route("/api/events",                get(api_events))
         .route("/reroll/{page}",             post(reroll))
         .route("/favicon.svg",               get(favicon))
@@ -265,9 +266,28 @@ async fn api_quote(State(state): State<AppState>) -> HandlerResult<Response> {
     Ok(([(header::CACHE_CONTROL, "no-store")], axum::Json(body)).into_response())
 }
 
+/// Today's artwork as JSON, for the macOS wallpaper agent. `image_url` is
+/// relative to the server. `next_rollover` says when it changes, barring a
+/// manual reroll.
+async fn api_artwork(State(state): State<AppState>) -> HandlerResult<Response> {
+    let artwork = daily::todays::<Artwork>(&state.pool, Kind::Artwork).await?;
+    let body = serde_json::json!({
+        "day":           daily::today().to_string(),
+        "next_rollover": daily::next_rollover().to_rfc3339(),
+        "artwork":       artwork.map(|a| serde_json::json!({
+            "id":        a.id,
+            "image_url": a.image_url(),
+            "artist":    a.artist,
+            "work":      a.work,
+            "date":      a.date,
+        })),
+    });
+    Ok(([(header::CACHE_CONTROL, "no-store")], axum::Json(body)).into_response())
+}
+
 /// A server-sent event, whose data is a kind (`quote`, `word_en`, …), each
 /// time that kind's pick for today may have changed outside the daily
-/// rollover: a reroll, or a quote added or deleted. Clients refetch it.
+/// rollover: a reroll, or a quote or artwork added or deleted. Clients refetch it.
 /// The rollover itself sends nothing: the first request after it makes the
 /// new pick, so clients refetch at `next_rollover` from the JSON endpoints.
 async fn api_events(State(state): State<AppState>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
@@ -442,7 +462,11 @@ async fn admin_artworks_post(State(state): State<AppState>, Form(form): Form<New
         date:   form.date.trim(),
     };
     match artwork::download_and_add(&state.pool, &state.images_dir, &new).await {
-        Ok(())  => Redirect::to("/admin#artworks"),
+        Ok(())  => {
+            // The first artwork added becomes today's.
+            let _ = state.changes.send(Kind::Artwork);
+            Redirect::to("/admin#artworks")
+        }
         Err(e)  => err_redirect("artworks", e),
     }
 }
@@ -450,13 +474,18 @@ async fn admin_artworks_post(State(state): State<AppState>, Form(form): Form<New
 /// One step: look up the Wikipedia/Wikidata link, download the image, store it.
 async fn admin_artworks_link(State(state): State<AppState>, Form(form): Form<LinkForm>) -> Redirect {
     match artwork::add_from_link(&state.pool, &state.images_dir, &form.link).await {
-        Ok(())  => Redirect::to("/admin#artworks"),
+        Ok(())  => {
+            let _ = state.changes.send(Kind::Artwork);
+            Redirect::to("/admin#artworks")
+        }
         Err(e)  => err_redirect("artworks", e),
     }
 }
 
 async fn admin_artworks_delete(State(state): State<AppState>, Form(form): Form<DeleteForm>) -> HandlerResult<Redirect> {
     artwork::delete(&state.pool, &state.images_dir, form.id).await?;
+    // Deleting today's artwork makes the next request pick another.
+    let _ = state.changes.send(Kind::Artwork);
     Ok(Redirect::to("/admin#artworks"))
 }
 

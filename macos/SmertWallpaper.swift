@@ -13,6 +13,7 @@
 // `SmertWallpaper --once` fetches, sets the wallpaper and exits.
 
 import AppKit
+import CoreImage
 import CoreText
 import UniformTypeIdentifiers
 
@@ -41,11 +42,6 @@ let fontsDir = supportDir.appendingPathComponent("fonts")
 let background = CGColor(srgbRed: 0x21 / 255, green: 0x22 / 255, blue: 0x2d / 255, alpha: 1)
 let ink = CGColor(srgbRed: 0xff / 255, green: 0xf6 / 255, blue: 0xec / 255, alpha: 1)
 let muted = CGColor(srgbRed: 0x7a / 255, green: 0x78 / 255, blue: 0x70 / 255, alpha: 1)
-
-func rgb(_ hex: UInt32) -> CGColor {
-    CGColor(srgbRed: CGFloat(hex >> 16 & 0xff) / 255, green: CGFloat(hex >> 8 & 0xff) / 255,
-            blue: CGFloat(hex & 0xff) / 255, alpha: 1)
-}
 
 /// Quote size in points on a 1440-point-wide screen, as on the display page;
 /// it scales with the screen's width.
@@ -324,7 +320,7 @@ final class Agent: NSObject {
     /// Nil until the artwork's image is downloaded.
     private func artworkWallpaper(_ canvas: Canvas, _ artwork: ArtworkPayload.Artwork) -> URL? {
         guard FileManager.default.fileExists(atPath: artwork.file.path) else { return nil }
-        return wallpaper("artwork", "\(artwork.id)|\(artwork.work)|\(artwork.artist)|\(artwork.date)|\(canvas)") {
+        return wallpaper("artwork", "\(artwork.id)|\(canvas.pixels)|blurred edges") {
             render(artwork, canvas)
         }
     }
@@ -453,8 +449,9 @@ func render(_ quote: QuotePayload.Quote?, _ canvas: Canvas) -> CGImage? {
     return ctx.makeImage()
 }
 
-/// The artwork in its bronze frame, with its title in italics and "artist,
-/// date" below, centered in `box` as on the display page.
+/// The artwork alone, centered and scaled up or down until it meets the
+/// nearer edges of the screen. The rest of the screen is its edges'
+/// colours, stretched outwards and blurred.
 func render(_ artwork: ArtworkPayload.Artwork, _ canvas: Canvas) -> CGImage? {
     guard let ctx = canvas.context(),
           let source = CGImageSourceCreateWithURL(artwork.file as CFURL, nil),
@@ -465,75 +462,57 @@ func render(_ artwork: ArtworkPayload.Artwork, _ canvas: Canvas) -> CGImage? {
               kCGImageSourceThumbnailMaxPixelSize: max(canvas.pixels.width, canvas.pixels.height),
           ] as CFDictionary)
     else { return nil }
-    let (pixels, box, scale) = (canvas.pixels, canvas.box, canvas.scale)
-    let rem = canvas.size / 2
-
-    // Caption.
-    let text = NSMutableAttributedString()
-    text.append(paragraph(artwork.work, font: font(italic: true, size: rem * 1.3), color: ink))
-    let meta = [artwork.artist, artwork.date].filter { !$0.isEmpty }.joined(separator: ", ")
-    if !meta.isEmpty {
-        text.append(paragraph("\n" + meta, font: font(italic: false, size: rem), color: muted, spaceBefore: rem * 0.4))
-    }
-    let textWidth = (pixels.width * 0.7).rounded()
-    let framesetter = CTFramesetterCreateWithAttributedString(text)
-    let textHeight = CTFramesetterSuggestFrameSizeWithConstraints(
-        framesetter, CFRange(), nil, CGSize(width: textWidth, height: .greatestFiniteMagnitude), nil
-    ).height.rounded(.up)
-    let gap = rem * 1.25
-
-    // The frame: a bevelled border, then a bronze band around the painting.
-    let border = 2 * scale
-    let band = min(max(4 * scale, pixels.height * 0.0075), 10 * scale)
-    let edge = border + band
-    let maxWidth = pixels.width * 0.9 - 2 * edge
-    let maxHeight = box.height * 0.92 - textHeight - gap - 2 * edge
-    // Never larger than the display page shows it: its own size, in points.
-    let fit = min(maxWidth / CGFloat(image.width), maxHeight / CGFloat(image.height), scale)
-    let painting = CGSize(width: (CGFloat(image.width) * fit).rounded(), height: (CGFloat(image.height) * fit).rounded())
-
-    let height = painting.height + 2 * edge + gap + textHeight
-    let bottom = (box.midY - height / 2).rounded()
-    let outer = CGRect(
-        x: ((pixels.width - painting.width) / 2 - edge).rounded(), y: bottom + textHeight + gap,
-        width: painting.width + 2 * edge, height: painting.height + 2 * edge)
-    let inner = outer.insetBy(dx: edge, dy: edge)
-
-    // The bevel, lit from the top left: light on the top and left edges.
-    ctx.setFillColor(rgb(0x47301a))
-    ctx.fill(outer)
-    ctx.setFillColor(rgb(0x5e3f1e))
-    ctx.fill(CGRect(x: outer.maxX - border, y: outer.minY, width: border, height: outer.height))
-    ctx.setFillColor(rgb(0xc4a271))
-    ctx.fill(CGRect(x: outer.minX, y: outer.minY + border, width: border, height: outer.height - border))
-    ctx.setFillColor(rgb(0xd9b98a))
-    ctx.fill(CGRect(x: outer.minX, y: outer.maxY - border, width: outer.width - border, height: border))
-
-    // The band's sheen runs from the top left to the bottom right.
-    let bandRect = outer.insetBy(dx: border, dy: border)
-    let stops: [(CGFloat, UInt32)] = [(0, 0x6e4a22), (0.22, 0xb88d5a), (0.45, 0x8a6236), (0.68, 0xc29a66), (1, 0x6a4520)]
-    let gradient = CGGradient(
-        colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!,
-        colors: stops.map { rgb($0.1) } as CFArray, locations: stops.map(\.0))!
-    ctx.saveGState()
-    ctx.clip(to: bandRect)
-    ctx.drawLinearGradient(
-        gradient, start: CGPoint(x: bandRect.minX, y: bandRect.maxY), end: CGPoint(x: bandRect.maxX, y: bandRect.minY),
-        options: [])
-    ctx.restoreGState()
-    // The band's inner slope, next to the painting: dark on the top and left.
-    ctx.setFillColor(rgb(0xebcda0))
-    ctx.fill(inner.insetBy(dx: -scale, dy: -scale))
-    ctx.setFillColor(rgb(0x28160a))
-    ctx.fill(CGRect(x: inner.minX - scale, y: inner.minY, width: inner.width, height: inner.height + scale))
-
+    let pixels = canvas.pixels
+    let fit = min(pixels.width / CGFloat(image.width), pixels.height / CGFloat(image.height))
+    let size = CGSize(width: (CGFloat(image.width) * fit).rounded(), height: (CGFloat(image.height) * fit).rounded())
+    let rect = CGRect(
+        x: ((pixels.width - size.width) / 2).rounded(), y: ((pixels.height - size.height) / 2).rounded(),
+        width: size.width, height: size.height)
     ctx.interpolationQuality = .high
-    ctx.draw(image, in: inner)
-
-    let slack = rem
-    let textRect = CGRect(x: (pixels.width - textWidth) / 2, y: bottom - slack, width: textWidth, height: textHeight + slack)
-    CTFrameDraw(CTFramesetterCreateFrame(framesetter, CFRange(), CGPath(rect: textRect, transform: nil), nil), ctx)
+    if let fill = blurredEdges(image, around: rect, pixels: pixels) {
+        ctx.draw(fill, in: CGRect(origin: .zero, size: pixels))
+    }
+    ctx.draw(image, in: rect)
     return ctx.makeImage()
+}
+
+/// The strip along each edge of `image` that faces empty screen, stretched
+/// to the screen's edge, and the whole blurred; `image` itself is drawn
+/// under it so the blur runs on into it without a seam.
+func blurredEdges(_ image: CGImage, around rect: CGRect, pixels: CGSize) -> CGImage? {
+    guard rect.width < pixels.width || rect.height < pixels.height,
+          let ctx = CGContext(
+              data: nil, width: Int(pixels.width), height: Int(pixels.height), bitsPerComponent: 8,
+              bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+              bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+    else { return nil }
+    let (w, h) = (CGFloat(image.width), CGFloat(image.height))
+    // CGImage crops count rows from the top; CGContext draws from the bottom.
+    if rect.width < pixels.width {
+        let strip = max((w * 0.03).rounded(), 1)
+        if let left = image.cropping(to: CGRect(x: 0, y: 0, width: strip, height: h)),
+           let right = image.cropping(to: CGRect(x: w - strip, y: 0, width: strip, height: h)) {
+            ctx.draw(left, in: CGRect(x: 0, y: rect.minY, width: rect.minX, height: rect.height))
+            ctx.draw(right, in: CGRect(x: rect.maxX, y: rect.minY, width: pixels.width - rect.maxX, height: rect.height))
+        }
+    } else {
+        let strip = max((h * 0.03).rounded(), 1)
+        if let top = image.cropping(to: CGRect(x: 0, y: 0, width: w, height: strip)),
+           let bottom = image.cropping(to: CGRect(x: 0, y: h - strip, width: w, height: strip)) {
+            ctx.draw(top, in: CGRect(x: rect.minX, y: rect.maxY, width: rect.width, height: pixels.height - rect.maxY))
+            ctx.draw(bottom, in: CGRect(x: rect.minX, y: 0, width: rect.width, height: rect.minY))
+        }
+    }
+    ctx.draw(image, in: rect)
+    guard let streaks = ctx.makeImage() else { return nil }
+
+    let extent = CGRect(origin: .zero, size: pixels)
+    let blurred = CIImage(cgImage: streaks)
+        .clampedToExtent()
+        .applyingGaussianBlur(sigma: max(pixels.width, pixels.height) * 0.03)
+        .cropped(to: extent)
+    return CIContext().createCGImage(
+        blurred, from: extent, format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
 }
 
 func layout(_ quote: QuotePayload.Quote?, size: CGFloat, width: CGFloat) -> (CTFramesetter, CGFloat) {

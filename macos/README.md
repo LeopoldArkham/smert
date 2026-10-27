@@ -1,8 +1,9 @@
 # smert: macOS wallpaper and lock screen
 
-A background agent that draws smert's daily artwork, from `/api/artwork`, as
-the desktop wallpaper of every screen, and its daily quote, from `/api/quote`,
-on the lock screen, as the display page shows them.
+A background agent that shows smert's daily artwork, from `/api/artwork`, as
+the desktop wallpaper of every screen, scaled to meet the nearer edges of the
+screen with the rest filled by a blur of its edges' colours, and draws its daily quote, from `/api/quote`, on the lock screen, as
+the display page shows it.
 
 - macOS has no lock screen picture of its own: it shows the wallpaper. So the
   agent puts the quote up when the screen locks and the artwork back when it
@@ -21,8 +22,7 @@ on the lock screen, as the display page shows them.
   offline.
 - macOS only sets the wallpaper of the current Space, so the agent sets it
   again whenever you switch to a Space that doesn't show it yet.
-- Long quotes and large artworks shrink to fit between the menu bar and the
-  Dock.
+- Long quotes shrink to fit between the menu bar and the Dock.
 - Font: Baskervville (SIL Open Font License, see `../android/licenses/`),
   copied from the Android app; macOS's Baskerville if it is missing.
 

@@ -38,14 +38,21 @@ pub async fn delete(pool: &SqlitePool, id: i64) -> Result<()> {
     Ok(())
 }
 
-/// Fetch the definition + translation and store it.
+/// Fetch the definition + translation and store it. Wiktionary titles are
+/// case-sensitive ("Fruste" has no page, "fruste" does), so a capitalised word
+/// that isn't found is retried in lowercase.
 pub async fn fetch_and_add(pool: &SqlitePool, word: &str, lang: &str) -> Result<()> {
-    let def = if lang == "french" {
-        fetch_fr(word).await?
-    } else {
-        fetch_en(word).await?
+    let def = match fetch(word, lang).await {
+        Err(e) if word.chars().any(char::is_uppercase) => {
+            fetch(&word.to_lowercase(), lang).await.map_err(|_| e)?
+        }
+        res => res?,
     };
     add(pool, lang, &def).await
+}
+
+async fn fetch(word: &str, lang: &str) -> Result<Definition> {
+    if lang == "french" { fetch_fr(word).await } else { fetch_en(word).await }
 }
 
 // ── Translation via English Wiktionary ───────────────────────────────────────
